@@ -10,11 +10,11 @@ const Hero = () => {
       <div className="container relative z-10 grid lg:grid-cols-2 gap-12 items-center py-20">
         <div className="space-y-8">
           <div className="space-y-4">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
               Empower Your 
               <span className="bg-gradient-primary bg-clip-text text-transparent"> Digital Future</span>
             </h1>
-            <p className="text-xl text-muted-foreground max-w-lg">
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-lg">
               Join Kenya's most trusted network marketing platform. Earn money through referrals, 
               complete simple tasks, and build your financial independence.
             </p>
@@ -30,7 +30,7 @@ const Hero = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-3 gap-6 pt-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-8">
             <div className="text-center">
               <div className="flex justify-center mb-2">
                 <Users className="h-8 w-8 text-primary" />
