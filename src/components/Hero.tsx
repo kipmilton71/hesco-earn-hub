@@ -11,12 +11,12 @@ const Hero = () => {
         <div className="space-y-8">
           <div className="space-y-4">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-              Empower Your 
-              <span className="bg-gradient-primary bg-clip-text text-transparent"> Digital Future</span>
+              <span className="bg-gradient-primary bg-clip-text text-transparent">Global Leader</span> Now in 
+              <span className="text-primary"> Kenya</span>
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-lg">
-              Join Kenya's most trusted network marketing platform. Earn money through referrals, 
-              complete simple tasks, and build your financial independence.
+              Trusted by over 1 million users across USA and UK, Hesco Technologies is now 
+              empowering Kenyan youth, investors, and entrepreneurs with proven wealth-building opportunities.
             </p>
           </div>
 
@@ -35,8 +35,8 @@ const Hero = () => {
               <div className="flex justify-center mb-2">
                 <Users className="h-8 w-8 text-primary" />
               </div>
-              <div className="text-2xl font-bold">5K+</div>
-              <div className="text-sm text-muted-foreground">Active Users</div>
+              <div className="text-2xl font-bold">1M+</div>
+              <div className="text-sm text-muted-foreground">Global Users</div>
             </div>
             <div className="text-center">
               <div className="flex justify-center mb-2">

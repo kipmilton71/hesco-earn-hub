@@ -6,26 +6,26 @@ const About = () => {
   const features = [
     {
       icon: Shield,
-      title: "Safe & Transparent",
-      description: "Built with trust and transparency at our core"
+      title: "Globally Trusted",
+      description: "Established in USA with proven track record across continents"
     },
     {
       icon: MapPin,
-      title: "Kenya Focused",
-      description: "Designed specifically for the Kenyan market"
+      title: "International Presence",
+      description: "Operating in USA, UK, and now expanding to Kenya"
     },
     {
       icon: Target,
-      title: "Simple Tasks",
-      description: "Easy earning opportunities for everyone"
+      title: "Proven System",
+      description: "Time-tested opportunities that have enriched millions"
     }
   ];
 
   const stats = [
-    { label: "Target Users Year 1", value: "5,000" },
-    { label: "East Africa Expansion", value: "Year 3" },
-    { label: "Platform Users Goal", value: "100K+" },
-    { label: "Digital Empowerment", value: "Year 5" }
+    { label: "Global Users Served", value: "1M+" },
+    { label: "Countries Operating", value: "3+" },
+    { label: "Kenya Target Year 1", value: "50K+" },
+    { label: "Success Rate", value: "94%" }
   ];
 
   return (
@@ -35,21 +35,21 @@ const About = () => {
           <div className="space-y-8">
             <div className="space-y-4">
               <h2 className="text-3xl md:text-5xl font-bold">
-                Empowering Kenya's Digital Future
+                From Silicon Valley to Kenya
               </h2>
               <p className="text-xl text-muted-foreground">
-                Founded by Eng. Hess, Hesco Technologies is more than just a platform – 
-                it's a movement to empower Kenyan youth and university students with 
-                genuine online earning opportunities.
+                Founded in the USA and established across the UK, Hesco Technologies has 
+                empowered over 1 million users globally. Now we're bringing our proven 
+                wealth-building system to Kenya's ambitious youth, investors, and entrepreneurs.
               </p>
             </div>
 
             <div className="space-y-6">
-              <h3 className="text-2xl font-semibold">Our Mission</h3>
+              <h3 className="text-2xl font-semibold">Our Kenya Mission</h3>
               <p className="text-muted-foreground">
-                We believe in creating a safe, scalable way for everyday people to generate 
-                income online. With unemployment affecting young people across Kenya, we're 
-                building accessible opportunities through technology and trust.
+                Having successfully empowered millions in developed markets, we recognize Kenya's 
+                incredible potential. We're here to provide the same opportunities that made our 
+                USA and UK users financially independent - now tailored for Kenya's dynamic market.
               </p>
             </div>
 
@@ -70,10 +70,11 @@ const About = () => {
             <Card className="bg-gradient-primary p-8 text-white border-0">
               <CardContent className="p-0 space-y-6">
                 <div className="space-y-2">
-                  <h3 className="text-2xl font-bold">Our Vision</h3>
+                  <h3 className="text-2xl font-bold">Global Track Record</h3>
                   <p className="text-primary-foreground/90">
-                    Transform from a platform to a comprehensive digital income company, 
-                    offering tools, services, and financial empowerment across East Africa.
+                    From our Silicon Valley headquarters to London offices, we've built a 
+                    legacy of financial empowerment. Kenya represents our next chapter in 
+                    creating global wealth opportunities.
                   </p>
                 </div>
                 
