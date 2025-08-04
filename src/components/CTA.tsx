@@ -21,7 +21,12 @@ const CTA = () => {
               <Smartphone className="mr-2 h-5 w-5" />
               Download App
             </Button>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-primary">
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="border-white text-white hover:bg-white hover:text-primary"
+              onClick={() => window.location.href = '/auth'}
+            >
               Start Earning Now
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>

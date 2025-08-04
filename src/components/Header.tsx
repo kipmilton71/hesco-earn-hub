@@ -25,10 +25,18 @@ const Header = () => {
 
         <div className="flex items-center space-x-4">
           <div className="hidden sm:flex items-center space-x-4">
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => window.location.href = '/auth'}
+            >
               Sign In
             </Button>
-            <Button size="sm" className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
+            <Button 
+              size="sm" 
+              className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+              onClick={() => window.location.href = '/auth'}
+            >
               Get Started
             </Button>
           </div>
@@ -52,10 +60,18 @@ const Header = () => {
                   About
                 </a>
                 <div className="flex flex-col space-y-3 pt-6">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.location.href = '/auth'}
+                  >
                     Sign In
                   </Button>
-                  <Button size="sm" className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
+                  <Button 
+                    size="sm" 
+                    className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+                    onClick={() => window.location.href = '/auth'}
+                  >
                     Get Started
                   </Button>
                 </div>
