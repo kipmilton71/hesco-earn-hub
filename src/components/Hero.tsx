@@ -21,7 +21,7 @@ const Hero = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg" className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
+            <Button size="lg" className="bg-gradient-primary hover:shadow-glow transition-all duration-300" onClick={() => window.location.href = '/auth'}>
               Start Earning Today
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>

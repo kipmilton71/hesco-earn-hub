@@ -21,6 +21,7 @@ interface SubscriptionPlan {
 const Payment = () => {
   const [user, setUser] = useState<User | null>(null);
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
+  const [userApplication, setUserApplication] = useState<any>(null);
   const [mpesaNumber, setMpesaNumber] = useState('');
   const [mpesaMessage, setMpesaMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -66,6 +67,26 @@ const Payment = () => {
       }
 
       setPlan(planData);
+
+      // Check if user has an application for this plan
+      const { data: applicationData, error: appError } = await supabase
+        .from('user_applications')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('subscription_plan_id', planId)
+        .single();
+
+      if (appError || !applicationData) {
+        toast({
+          title: "Error",
+          description: "No application found for this plan. Please apply first.",
+          variant: "destructive"
+        });
+        navigate('/select-plan');
+        return;
+      }
+
+      setUserApplication(applicationData);
       setLoading(false);
     };
 
@@ -81,7 +102,7 @@ const Payment = () => {
   };
 
   const handleSubmitPayment = async () => {
-    if (!user || !plan) return;
+    if (!user || !plan || !userApplication) return;
 
     if (!mpesaNumber || !mpesaMessage) {
       toast({
@@ -100,6 +121,7 @@ const Payment = () => {
         .insert({
           user_id: user.id,
           subscription_plan_id: plan.id,
+          user_application_id: userApplication.id,
           mpesa_number: mpesaNumber,
           mpesa_message: mpesaMessage,
           amount: plan.price,
