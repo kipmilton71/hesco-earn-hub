@@ -24,6 +24,7 @@ export type Database = {
           status: string | null
           subscription_plan_id: string
           updated_at: string | null
+          user_application_id: string | null
           user_id: string
         }
         Insert: {
@@ -35,6 +36,7 @@ export type Database = {
           status?: string | null
           subscription_plan_id: string
           updated_at?: string | null
+          user_application_id?: string | null
           user_id: string
         }
         Update: {
@@ -46,14 +48,29 @@ export type Database = {
           status?: string | null
           subscription_plan_id?: string
           updated_at?: string | null
+          user_application_id?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_payment_submissions_subscription_plan_id"
+            columns: ["subscription_plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payment_submissions_subscription_plan_id_fkey"
             columns: ["subscription_plan_id"]
             isOneToOne: false
             referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_submissions_user_application_id_fkey"
+            columns: ["user_application_id"]
+            isOneToOne: false
+            referencedRelation: "user_applications"
             referencedColumns: ["id"]
           },
         ]
@@ -147,6 +164,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_user_applications_subscription_plan_id"
+            columns: ["subscription_plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_applications_subscription_plan_id_fkey"
             columns: ["subscription_plan_id"]
