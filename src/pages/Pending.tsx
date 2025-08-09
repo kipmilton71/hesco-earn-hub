@@ -219,6 +219,15 @@ const Pending = () => {
                 <p className="text-sm text-muted-foreground mt-2">
                   This usually takes 1-24 hours.
                 </p>
+                <div className="mt-4 p-4 bg-background rounded-lg">
+                  <h4 className="font-semibold mb-2">What happens next?</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1 text-left">
+                    <li>• Admin reviews your payment submission</li>
+                    <li>• Payment verification is completed</li>
+                    <li>• Application is approved or rejected</li>
+                    <li>• You'll be automatically redirected to dashboard</li>
+                  </ul>
+                </div>
               </div>
             )}
 

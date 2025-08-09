@@ -112,6 +112,7 @@ const Pricing = () => {
                       ? 'bg-gradient-primary hover:shadow-glow' 
                       : 'bg-gradient-secondary'
                   } transition-all duration-300`}
+                  onClick={() => window.location.href = '/auth'}
                 >
                   Get Started
                 </Button>
@@ -124,7 +125,7 @@ const Pricing = () => {
           <p className="text-muted-foreground mb-4">
             All plans include our "Refer 3, Earn Your Fee Back" guarantee
           </p>
-          <Button variant="outline" size="lg">
+          <Button variant="outline" size="lg" className="w-full sm:w-auto">
             Compare All Features
           </Button>
         </div>

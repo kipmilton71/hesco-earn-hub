@@ -74,9 +74,20 @@ const Payment = () => {
         .select('*')
         .eq('user_id', session.user.id)
         .eq('subscription_plan_id', planId)
-        .single();
+        .maybeSingle();
 
-      if (appError || !applicationData) {
+      if (appError) {
+        console.error('Error fetching application:', appError);
+        toast({
+          title: "Error",
+          description: "Failed to load application data",
+          variant: "destructive"
+        });
+        navigate('/select-plan');
+        return;
+      }
+
+      if (!applicationData) {
         toast({
           title: "Error",
           description: "No application found for this plan. Please apply first.",

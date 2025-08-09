@@ -20,13 +20,10 @@ const Hero = () => {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg" className="bg-gradient-primary hover:shadow-glow transition-all duration-300" onClick={() => window.location.href = '/auth'}>
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+            <Button size="lg" className="bg-gradient-primary hover:shadow-glow transition-all duration-300 w-full sm:w-auto" onClick={() => window.location.href = '/auth'}>
               Start Earning Today
               <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button variant="outline" size="lg">
-              Watch Demo
             </Button>
           </div>
 

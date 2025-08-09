@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import SelectPlan from "./pages/SelectPlan";
+import PlanSelection from "./pages/PlanSelection";
 import Payment from "./pages/Payment";
 import Pending from "./pages/Pending";
 import Dashboard from "./pages/Dashboard";
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/select-plan" element={<SelectPlan />} />
+          <Route path="/plan-selection" element={<PlanSelection />} />
           <Route path="/payment" element={<Payment />} />
           <Route path="/pending" element={<Pending />} />
           <Route path="/dashboard" element={<Dashboard />} />

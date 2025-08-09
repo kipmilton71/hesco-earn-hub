@@ -147,11 +147,46 @@ const AdminDashboard = () => {
         title: "Success",
         description: `Application ${newStatus} successfully.`,
       });
+
+      // Refresh data to get updated counts
+      fetchData();
     } catch (error) {
       console.error('Error updating application:', error);
       toast({
         title: "Error",
         description: "Failed to update application status.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updatePaymentStatus = async (paymentId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('payment_submissions')
+        .update({ status: newStatus })
+        .eq('id', paymentId);
+
+      if (error) throw error;
+
+      setPayments(prev => 
+        prev.map(payment => 
+          payment.id === paymentId ? { ...payment, status: newStatus } : payment
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: `Payment ${newStatus} successfully.`,
+      });
+
+      // Refresh data to get updated counts
+      fetchData();
+    } catch (error) {
+      console.error('Error updating payment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update payment status.",
         variant: "destructive",
       });
     }
@@ -246,7 +281,8 @@ const AdminDashboard = () => {
                         {application.subscription_plans?.name} - {application.subscription_plans?.currency} {application.subscription_plans?.price}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {new Date(application.created_at).toLocaleDateString()}
+                        Applied: {new Date(application.created_at).toLocaleDateString()}
+                        {application.profiles?.phone && ` | Phone: ${application.profiles.phone}`}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -313,6 +349,26 @@ const AdminDashboard = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       {getStatusBadge(payment.status)}
+                      {payment.status === 'pending' && (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => updatePaymentStatus(payment.id, 'verified')}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Verify
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => updatePaymentStatus(payment.id, 'rejected')}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))

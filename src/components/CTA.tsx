@@ -16,15 +16,15 @@ const CTA = () => {
             Start with just KES 500 and unlock your earning potential today.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full">
+            <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90 w-full sm:w-auto">
               <Smartphone className="mr-2 h-5 w-5" />
               Download App
             </Button>
             <Button 
               size="lg" 
               variant="outline" 
-              className="border-white text-white hover:bg-white hover:text-primary"
+              className="border-white text-white hover:bg-white hover:text-primary w-full sm:w-auto"
               onClick={() => window.location.href = '/auth'}
             >
               Start Earning Now

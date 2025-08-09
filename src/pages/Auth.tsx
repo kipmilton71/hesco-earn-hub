@@ -11,7 +11,6 @@ import { Eye, EyeOff } from 'lucide-react';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -24,18 +23,30 @@ const Auth = () => {
     // Check if user is already logged in
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate('/dashboard');
-      }
+              if (session) {
+          // Check if user is admin
+          const { data: roleData, error: roleError } = await supabase
+            .rpc('get_current_user_role');
+          
+          if (roleError) {
+            console.error('Error checking user role:', roleError);
+            // Default to dashboard if role check fails
+            navigate('/dashboard');
+          } else if (roleData === 'admin') {
+            navigate('/admin');
+          } else {
+            navigate('/dashboard');
+          }
+        }
     };
     checkUser();
   }, [navigate]);
 
   const validateForm = () => {
-    if (!email && !phone) {
+    if (!email) {
       toast({
         title: "Error",
-        description: "Please provide either email or phone number",
+        description: "Please provide an email address",
         variant: "destructive"
       });
       return false;
@@ -68,6 +79,18 @@ const Auth = () => {
       return false;
     }
 
+    // Additional validation for signup
+    if (!isLogin) {
+      if (!email.includes('@')) {
+        toast({
+          title: "Error",
+          description: "Please enter a valid email address",
+          variant: "destructive"
+        });
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -79,51 +102,108 @@ const Auth = () => {
       if (isLogin) {
         // Login
         const { error } = await supabase.auth.signInWithPassword({
-          email: email || undefined,
-          phone: phone || undefined,
+          email: email,
           password,
         });
 
         if (error) throw error;
+
+        // Check if user is admin
+        const { data: roleData, error: roleError } = await supabase
+          .rpc('get_current_user_role');
 
         toast({
           title: "Success",
           description: "Logged in successfully!"
         });
-        navigate('/dashboard');
-      } else {
-        // Sign up
-        const redirectUrl = `${window.location.origin}/dashboard`;
         
-        const { error } = await supabase.auth.signUp({
-          email: email || undefined,
-          phone: phone || undefined,
+        if (roleError) {
+          console.error('Error checking user role:', roleError);
+          // Default to dashboard if role check fails
+          navigate('/dashboard');
+        } else if (roleData === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        // Sign up - email only
+        const { data, error } = await supabase.auth.signUp({
+          email: email,
           password,
           options: {
-            emailRedirectTo: redirectUrl,
-            data: {
-              phone: phone || undefined
-            }
+            emailRedirectTo: `${window.location.origin}/select-plan`
           }
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Signup error:', error);
+          
+          // Handle specific error cases
+          if (error.message?.includes('422')) {
+            throw new Error('Invalid signup data. Please check your information and try again.');
+          } else if (error.message?.includes('500')) {
+            throw new Error('Server error. Please try again in a few moments.');
+          } else if (error.message?.includes('Database error saving new user')) {
+            throw new Error('Unable to create account. Please try again or contact support.');
+          } else {
+            throw error;
+          }
+        }
+
+        // Manually create profile to avoid database trigger issues
+        if (data.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: data.user.id,
+              email: email,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'id'
+            });
+
+          if (profileError) {
+            console.error('Profile creation error:', profileError);
+            // Don't throw error here, let user continue
+          }
+        }
+
+        console.log('User created successfully:', data.user?.id);
 
         toast({
           title: "Success",
-          description: email 
-            ? "Account created! Please check your email to verify your account."
-            : "Account created! Please verify your phone number."
+          description: "Account created! Please check your email to verify your account."
         });
         
-        if (email) {
-          setIsLogin(true);
-        }
+        // Redirect to plan selection after successful signup
+        navigate('/select-plan');
       }
     } catch (error: any) {
+      console.error('Auth error:', error);
+      
+      let errorMessage = "An error occurred during authentication";
+      
+             if (error.message) {
+         if (error.message.includes('Email not confirmed')) {
+           errorMessage = "Please check your email and click the verification link";
+         } else if (error.message.includes('Invalid login credentials')) {
+           errorMessage = "Invalid email or password";
+         } else if (error.message.includes('User already registered')) {
+           errorMessage = "An account with this email already exists";
+         } else if (error.message.includes('Password should be at least')) {
+           errorMessage = "Password must be at least 6 characters long";
+         } else if (error.message.includes('database error')) {
+           errorMessage = "Database error. Please try again or contact support.";
+         } else {
+           errorMessage = error.message;
+         }
+       }
+      
       toast({
         title: "Error",
-        description: error.message || "An error occurred",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -146,26 +226,17 @@ const Auth = () => {
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="login" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email or Phone</Label>
-                <Input
-                  id="email"
-                  type="text"
-                  placeholder="Enter email or phone number"
-                  value={email || phone}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value.includes('@')) {
-                      setEmail(value);
-                      setPhone('');
-                    } else {
-                      setPhone(value);
-                      setEmail('');
-                    }
-                  }}
-                />
-              </div>
+                         <TabsContent value="login" className="space-y-4">
+               <div className="space-y-2">
+                 <Label htmlFor="email">Email</Label>
+                 <Input
+                   id="email"
+                   type="email"
+                   placeholder="Enter your email"
+                   value={email}
+                   onChange={(e) => setEmail(e.target.value)}
+                 />
+               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
@@ -193,27 +264,17 @@ const Auth = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="signup" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
-                <Input
-                  id="signup-email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-phone">Phone Number (Optional)</Label>
-                <Input
-                  id="signup-phone"
-                  type="tel"
-                  placeholder="Enter your phone number"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
-              </div>
+                         <TabsContent value="signup" className="space-y-4">
+               <div className="space-y-2">
+                 <Label htmlFor="signup-email">Email</Label>
+                 <Input
+                   id="signup-email"
+                   type="email"
+                   placeholder="Enter your email"
+                   value={email}
+                   onChange={(e) => setEmail(e.target.value)}
+                 />
+               </div>
               <div className="space-y-2">
                 <Label htmlFor="signup-password">Password</Label>
                 <div className="relative">

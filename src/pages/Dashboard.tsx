@@ -27,10 +27,17 @@ interface UserApplication {
   };
 }
 
+interface UserPlanSelection {
+  id: string;
+  selected_plan: string;
+  selected_at: string;
+}
+
 const Dashboard = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [application, setApplication] = useState<UserApplication | null>(null);
+  const [planSelection, setPlanSelection] = useState<UserPlanSelection | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -46,17 +53,33 @@ const Dashboard = () => {
 
       setUser(session.user);
 
+      // Check if user is admin first
+      const { data: roleData, error: roleError } = await supabase
+        .rpc('get_current_user_role');
+
+      if (roleError) {
+        console.error('Error checking user role:', roleError);
+        // Continue with normal flow if role check fails
+      } else if (roleData === 'admin') {
+        navigate('/admin');
+        return;
+      }
+
       // Fetch user profile
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+      }
 
       setProfile(profileData);
 
       // Fetch user application
-      const { data: applicationData } = await supabase
+      const { data: applicationData, error } = await supabase
         .from('user_applications')
         .select(`
           *,
@@ -68,13 +91,28 @@ const Dashboard = () => {
           )
         `)
         .eq('user_id', session.user.id)
-        .single();
+        .maybeSingle();
 
-      if (!applicationData) {
-        // No application found, redirect to plan selection
-        navigate('/select-plan');
+      if (error) {
+        console.error('Error fetching application:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load user data",
+          variant: "destructive"
+        });
+        setLoading(false);
         return;
       }
+
+             if (!applicationData) {
+         // No application found, redirect to plan selection
+         toast({
+           title: "Welcome!",
+           description: "Please select a subscription plan to get started.",
+         });
+         navigate('/select-plan');
+         return;
+       }
 
       if (applicationData.status === 'pending') {
         // Application is pending, redirect to pending page
@@ -93,7 +131,26 @@ const Dashboard = () => {
         return;
       }
 
+      if (applicationData.status !== 'approved') {
+        // Any other status (like suspended) should redirect to pending
+        navigate('/pending');
+        return;
+      }
+
       setApplication(applicationData);
+
+      // Fetch user's plan selection
+      const { data: planSelectionData, error: planError } = await supabase
+        .from('user_plan_selections')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (planError) {
+        console.error('Error fetching plan selection:', planError);
+      }
+
+      setPlanSelection(planSelectionData);
       setLoading(false);
     };
 
@@ -267,6 +324,41 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
             </div>
+          </div>
+        )}
+
+        {/* Selected Plan Details */}
+        {planSelection && (
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold mb-4">Your Selected Plan</h2>
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Active Plan: {planSelection.selected_plan.charAt(0).toUpperCase() + planSelection.selected_plan.slice(1)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Plan Type:</span>
+                    <Badge className="bg-gradient-primary">
+                      {planSelection.selected_plan.charAt(0).toUpperCase() + planSelection.selected_plan.slice(1)}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Selected On:</span>
+                    <span>{new Date(planSelection.selected_at).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status:</span>
+                    <Badge variant="outline" className="text-secondary border-secondary">
+                      Active
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 

@@ -40,11 +40,22 @@ const SelectPlan = () => {
       setUser(session.user);
 
       // Check if user already has an active subscription or pending application
-      const { data: existingApplication } = await supabase
+      const { data: existingApplication, error: appError } = await supabase
         .from('user_applications')
         .select('*')
         .eq('user_id', session.user.id)
-        .single();
+        .maybeSingle();
+
+      if (appError) {
+        console.error('Error checking existing application:', appError);
+        toast({
+          title: "Error",
+          description: "Failed to check existing applications",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
 
       if (existingApplication) {
         if (existingApplication.status === 'approved') {
