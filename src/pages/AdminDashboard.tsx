@@ -3,6 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TaskManager } from "@/components/admin/TaskManager";
+import { ResponseViewer } from "@/components/admin/ResponseViewer";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, XCircle, Pause, Users, FileText, DollarSign } from "lucide-react";
 
@@ -229,153 +232,176 @@ const AdminDashboard = () => {
           </Button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Applications</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{pendingApplications}</div>
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="applications">Applications</TabsTrigger>
+            <TabsTrigger value="tasks">Daily Tasks</TabsTrigger>
+            <TabsTrigger value="responses">Responses</TabsTrigger>
+          </TabsList>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{applications.length}</div>
-            </CardContent>
-          </Card>
+          <TabsContent value="overview">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pending Applications</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{pendingApplications}</div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">KSh {totalRevenue.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-        </div>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{applications.length}</div>
+                </CardContent>
+              </Card>
 
-        {/* User Applications */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>User Applications</CardTitle>
-            <CardDescription>Manage user subscription applications</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {applications.length === 0 ? (
-                <p className="text-muted-foreground">No applications found.</p>
-              ) : (
-                applications.map((application) => (
-                  <div key={application.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium">{application.profiles?.email}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {application.subscription_plans?.name} - {application.subscription_plans?.currency} {application.subscription_plans?.price}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Applied: {new Date(application.created_at).toLocaleDateString()}
-                        {application.profiles?.phone && ` | Phone: ${application.profiles.phone}`}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {getStatusBadge(application.status)}
-                      {application.status === 'pending' && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => updateApplicationStatus(application.id, 'approved')}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => updateApplicationStatus(application.id, 'rejected')}
-                          >
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Reject
-                          </Button>
-                        </div>
-                      )}
-                      {application.status === 'approved' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateApplicationStatus(application.id, 'suspended')}
-                        >
-                          <Pause className="h-4 w-4 mr-1" />
-                          Suspend
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">KSh {totalRevenue.toLocaleString()}</div>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+          </TabsContent>
 
-        {/* Payment Submissions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Submissions</CardTitle>
-            <CardDescription>Review user payment submissions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {payments.length === 0 ? (
-                <p className="text-muted-foreground">No payments found.</p>
-              ) : (
-                payments.map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium">{payment.profiles?.email}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {payment.subscription_plans?.name} - KSh {Number(payment.amount).toLocaleString()}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        M-Pesa: {payment.mpesa_number} | {new Date(payment.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {getStatusBadge(payment.status)}
-                      {payment.status === 'pending' && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => updatePaymentStatus(payment.id, 'verified')}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Verify
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => updatePaymentStatus(payment.id, 'rejected')}
-                          >
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Reject
-                          </Button>
+          <TabsContent value="applications">
+            <div className="grid gap-6">
+              {/* User Applications */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>User Applications</CardTitle>
+                  <CardDescription>Manage user subscription applications</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {applications.length === 0 ? (
+                      <p className="text-muted-foreground">No applications found.</p>
+                    ) : (
+                      applications.map((application) => (
+                        <div key={application.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex-1">
+                            <div className="font-medium">{application.profiles?.email}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {application.subscription_plans?.name} - {application.subscription_plans?.currency} {application.subscription_plans?.price}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Applied: {new Date(application.created_at).toLocaleDateString()}
+                              {application.profiles?.phone && ` | Phone: ${application.profiles.phone}`}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {getStatusBadge(application.status)}
+                            {application.status === 'pending' && (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => updateApplicationStatus(application.id, 'approved')}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => updateApplicationStatus(application.id, 'rejected')}
+                                >
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
+                            {application.status === 'approved' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => updateApplicationStatus(application.id, 'suspended')}
+                              >
+                                <Pause className="h-4 w-4 mr-1" />
+                                Suspend
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
+                      ))
+                    )}
                   </div>
-                ))
-              )}
+                </CardContent>
+              </Card>
+
+              {/* Payment Submissions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payment Submissions</CardTitle>
+                  <CardDescription>Review user payment submissions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {payments.length === 0 ? (
+                      <p className="text-muted-foreground">No payments found.</p>
+                    ) : (
+                      payments.map((payment) => (
+                        <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex-1">
+                            <div className="font-medium">{payment.profiles?.email}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {payment.subscription_plans?.name} - KSh {Number(payment.amount).toLocaleString()}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              M-Pesa: {payment.mpesa_number} | {new Date(payment.created_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {getStatusBadge(payment.status)}
+                            {payment.status === 'pending' && (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => updatePaymentStatus(payment.id, 'verified')}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Verify
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => updatePaymentStatus(payment.id, 'rejected')}
+                                >
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+          </TabsContent>
+
+          <TabsContent value="tasks">
+            <TaskManager />
+          </TabsContent>
+
+          <TabsContent value="responses">
+            <ResponseViewer />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

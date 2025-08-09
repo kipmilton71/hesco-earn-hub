@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_tasks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          task_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          task_date?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          task_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payment_submissions: {
         Row: {
           amount: number
@@ -99,6 +132,53 @@ export type Database = {
         }
         Relationships: []
       }
+      questions: {
+        Row: {
+          created_at: string
+          daily_task_id: string | null
+          id: string
+          is_active: boolean
+          is_required: boolean
+          options: string[] | null
+          order_index: number
+          question_text: string
+          question_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          daily_task_id?: string | null
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          options?: string[] | null
+          order_index?: number
+          question_text: string
+          question_type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          daily_task_id?: string | null
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          options?: string[] | null
+          order_index?: number
+          question_text?: string
+          question_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_daily_task_id_fkey"
+            columns: ["daily_task_id"]
+            isOneToOne: false
+            referencedRelation: "daily_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_plans: {
         Row: {
           created_at: string | null
@@ -180,6 +260,78 @@ export type Database = {
           },
         ]
       }
+      user_plan_selections: {
+        Row: {
+          created_at: string | null
+          id: string
+          selected_at: string | null
+          selected_plan: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          selected_at?: string | null
+          selected_plan: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          selected_at?: string | null
+          selected_plan?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_responses: {
+        Row: {
+          created_at: string
+          daily_task_id: string
+          id: string
+          question_id: string
+          response_options: string[] | null
+          response_text: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_task_id: string
+          id?: string
+          question_id: string
+          response_options?: string[] | null
+          response_text?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_task_id?: string
+          id?: string
+          question_id?: string
+          response_options?: string[] | null
+          response_text?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_responses_daily_task_id_fkey"
+            columns: ["daily_task_id"]
+            isOneToOne: false
+            referencedRelation: "daily_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -216,6 +368,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
+      }
+      setup_user_profile: {
+        Args: { user_id: string; user_email: string }
+        Returns: undefined
       }
     }
     Enums: {
