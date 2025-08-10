@@ -1,4 +1,5 @@
 import { Facebook, Twitter, Instagram, Mail, Phone, MapPin } from "lucide-react";
+import HescoLogo from "./HescoLogo";
 
 const Footer = () => {
   return (
@@ -6,10 +7,7 @@ const Footer = () => {
       <div className="container">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 rounded-full bg-gradient-primary"></div>
-              <span className="text-xl font-bold">Hesco Technologies</span>
-            </div>
+            <HescoLogo size="md" />
             <p className="text-background/80 max-w-xs">
               Empowering Kenya's digital future through safe and transparent 
               network marketing opportunities.
@@ -61,7 +59,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-background/20 mt-12 pt-8 text-center text-background/60">
-          <p>&copy; 2024 Hesco Technologies. All rights reserved. | Terms of Service | Privacy Policy</p>
+          <p>&copy; 2024 HESCOTECH. All rights reserved. | Terms of Service | Privacy Policy</p>
         </div>
       </div>
     </footer>

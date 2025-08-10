@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Pause, Users, FileText, DollarSign } from "lucide-react";
+import { CheckCircle, XCircle, Pause, Users, FileText, DollarSign, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface UserApplication {
   id: string;
@@ -44,6 +45,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     checkUserRole();
@@ -192,6 +194,23 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out"
+      });
+      navigate('/');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to logout",
+        variant: "destructive"
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { variant: "outline" as const, color: "text-yellow-600" },
@@ -224,9 +243,19 @@ const AdminDashboard = () => {
       <div className="container mx-auto py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <Button variant="outline" onClick={() => window.location.href = '/dashboard'}>
-            Back to Dashboard
-          </Button>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => window.location.href = '/dashboard'}>
+              Back to Dashboard
+            </Button>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
