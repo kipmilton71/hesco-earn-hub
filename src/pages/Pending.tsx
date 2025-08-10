@@ -37,12 +37,12 @@ const Pending = () => {
       .from('user_applications')
       .select(`
         *,
-        subscription_plans (
+        subscription_plans!user_applications_subscription_plan_id_fkey (
           name,
           price,
           currency
         ),
-        payment_submissions (
+        payment_submissions!payment_submissions_user_application_id_fkey (
           amount,
           status,
           created_at
