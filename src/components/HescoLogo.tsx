@@ -21,7 +21,7 @@ const HescoLogo: React.FC<HescoLogoProps> = ({
   return (
     <div className={`flex items-center space-x-2 ${className}`}>
       <img 
-        src="/hesco-logo.svg" 
+        src="/hesco-logo.ico" 
         alt="HESCOTECH Logo" 
         className={sizeClasses[size]}
       />
