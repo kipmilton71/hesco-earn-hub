@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, User, CreditCard, Calendar, Loader2 } from 'lucide-react';
+import { DailyTask } from '@/components/customer/DailyTask';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface UserProfile {
@@ -361,6 +362,12 @@ const Dashboard = () => {
             </Card>
           </div>
         )}
+
+        {/* Daily Tasks Section */}
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">Daily Tasks</h2>
+          <DailyTask />
+        </div>
 
         {/* Quick Actions */}
         <div className="mt-8">
