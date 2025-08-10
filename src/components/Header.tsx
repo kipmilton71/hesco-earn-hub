@@ -1,9 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import HescoLogo from "./HescoLogo";
 
 const Header = () => {
+  const navigate = useNavigate();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
@@ -26,14 +29,14 @@ const Header = () => {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => window.location.href = '/auth'}
+              onClick={() => navigate('/auth')}
             >
               Sign In
             </Button>
             <Button 
               size="sm" 
               className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
-              onClick={() => window.location.href = '/auth'}
+              onClick={() => navigate('/auth')}
             >
               Get Started
             </Button>
@@ -61,14 +64,14 @@ const Header = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => window.location.href = '/auth'}
+                    onClick={() => navigate('/auth')}
                   >
                     Sign In
                   </Button>
                   <Button 
                     size="sm" 
                     className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
-                    onClick={() => window.location.href = '/auth'}
+                    onClick={() => navigate('/auth')}
                   >
                     Get Started
                   </Button>
