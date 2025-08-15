@@ -100,8 +100,8 @@ const AdminDashboard = () => {
         .from('user_applications')
         .select(`
           *,
-          subscription_plans!user_applications_subscription_plan_id_fkey(name, price, currency),
-          profiles!user_applications_user_id_fkey(email, phone)
+          subscription_plans (name, price, currency),
+          profiles (email, phone)
         `)
         .order('created_at', { ascending: false });
 
@@ -112,8 +112,8 @@ const AdminDashboard = () => {
         .from('payment_submissions')
         .select(`
           *,
-          profiles!payment_submissions_user_id_fkey(email),
-          subscription_plans!payment_submissions_subscription_plan_id_fkey(name)
+          profiles (email),
+          subscription_plans (name)
         `)
         .order('created_at', { ascending: false });
 

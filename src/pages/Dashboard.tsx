@@ -84,7 +84,7 @@ const Dashboard = () => {
         .from('user_applications')
         .select(`
           *,
-          subscription_plans!user_applications_subscription_plan_id_fkey (
+          subscription_plans (
             name,
             price,
             currency,
