@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, User, CreditCard, Calendar, Loader2 } from 'lucide-react';
 import { DailyTask } from '@/components/customer/DailyTask';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 
 interface UserProfile {
   id: string;
@@ -42,6 +43,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showBillingModal, setShowBillingModal] = useState(false);
 
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -192,6 +195,14 @@ const Dashboard = () => {
     );
   }
 
+  // Redirect unverified users to /pending
+  if (application && application.status !== 'approved') {
+    useEffect(() => {
+      navigate('/pending');
+    }, [navigate]);
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-hero">
       {/* Header */}
@@ -233,12 +244,20 @@ const Dashboard = () => {
                   Hello, <span className="font-semibold">{user?.email}</span>
                 </p>
                 <p className="text-muted-foreground">
-                  Your account is verified and active. You have full access to all features.
+                  {application && application.status === 'approved'
+                    ? 'Your account is verified and active. You have full access to all features.'
+                    : 'Your account is not yet verified. Please complete payment and wait for approval.'}
                 </p>
                 <div className="flex items-center gap-2 mt-4">
-                  <Badge variant="outline" className="text-secondary border-secondary">
-                    ✅ Verified Account
-                  </Badge>
+                  {application && application.status === 'approved' ? (
+                    <Badge variant="outline" className="text-secondary border-secondary">
+                      ✅ Verified Account
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive">
+                      ⏳ Pending Verification
+                    </Badge>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -253,15 +272,21 @@ const Dashboard = () => {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-secondary rounded-full"></div>
-                  <span className="text-sm">Active Subscription</span>
+                  <span className="text-sm">
+                    {application && application.status === 'approved' ? 'Active Subscription' : 'Pending Approval'}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-secondary rounded-full"></div>
-                  <span className="text-sm">Full Access</span>
+                  <span className="text-sm">
+                    {application && application.status === 'approved' ? 'Full Access' : 'Limited Access'}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-secondary rounded-full"></div>
-                  <span className="text-sm">Verified Payment</span>
+                  <span className="text-sm">
+                    {application && application.status === 'approved' ? 'Verified Payment' : 'Awaiting Payment Verification'}
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -292,7 +317,7 @@ const Dashboard = () => {
                       </p>
                     </div>
                     <Badge className="bg-gradient-secondary">
-                      Active
+                      {application.status === 'approved' ? 'Active' : 'Pending'}
                     </Badge>
                   </div>
                 </CardContent>
@@ -354,7 +379,7 @@ const Dashboard = () => {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status:</span>
                     <Badge variant="outline" className="text-secondary border-secondary">
-                      Active
+                      {application && application.status === 'approved' ? 'Active' : 'Pending'}
                     </Badge>
                   </div>
                 </div>
@@ -363,17 +388,19 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Daily Tasks Section */}
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-4">Daily Tasks</h2>
-          <DailyTask />
-        </div>
+        {/* Daily Tasks Section - Only show if verified */}
+        {application && application.status === 'approved' && (
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold mb-4">Daily Tasks</h2>
+            <DailyTask />
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="mt-8">
           <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
           <div className="grid md:grid-cols-3 gap-4">
-            <Card className="shadow-card hover:shadow-glow transition-shadow cursor-pointer">
+            <Card className="shadow-card hover:shadow-glow transition-shadow cursor-pointer" onClick={() => setShowProfileModal(true)}>
               <CardContent className="pt-6 text-center">
                 <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mx-auto mb-3">
                   <User className="h-6 w-6 text-white" />
@@ -383,7 +410,7 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className="shadow-card hover:shadow-glow transition-shadow cursor-pointer">
+            <Card className="shadow-card hover:shadow-glow transition-shadow cursor-pointer" onClick={() => setShowBillingModal(true)}>
               <CardContent className="pt-6 text-center">
                 <div className="w-12 h-12 bg-gradient-secondary rounded-lg flex items-center justify-center mx-auto mb-3">
                   <CreditCard className="h-6 w-6 text-white" />
@@ -393,7 +420,7 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className="shadow-card hover:shadow-glow transition-shadow cursor-pointer">
+            <Card className="shadow-card hover:shadow-glow transition-shadow cursor-pointer" onClick={() => navigate('/select-plan')}>
               <CardContent className="pt-6 text-center">
                 <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mx-auto mb-3">
                   <Calendar className="h-6 w-6 text-white" />
@@ -405,6 +432,36 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Profile Settings Modal */}
+      <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Profile Settings</DialogTitle>
+            <DialogDescription>Manage your account information below.</DialogDescription>
+          </DialogHeader>
+          {/* TODO: Add profile form here */}
+          <div className="my-4">Profile management coming soon.</div>
+          <DialogClose asChild>
+            <Button variant="outline">Close</Button>
+          </DialogClose>
+        </DialogContent>
+      </Dialog>
+
+      {/* Billing History Modal */}
+      <Dialog open={showBillingModal} onOpenChange={setShowBillingModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Billing History</DialogTitle>
+            <DialogDescription>View your payment history below.</DialogDescription>
+          </DialogHeader>
+          {/* TODO: Add billing history table here */}
+          <div className="my-4">Billing history coming soon.</div>
+          <DialogClose asChild>
+            <Button variant="outline">Close</Button>
+          </DialogClose>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

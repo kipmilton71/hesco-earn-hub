@@ -146,6 +146,14 @@ export const ResponseViewer = () => {
     return <div className="flex justify-center items-center p-8">Loading...</div>;
   }
 
+  if (tasks.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8">
+        <p className="text-muted-foreground">No daily tasks found. Create a daily task to start collecting responses.</p>
+      </div>
+    );
+  }
+
   const groupedResponses = groupResponsesByUser();
 
   return (
@@ -244,7 +252,7 @@ export const ResponseViewer = () => {
               ) : (
                 <Card>
                   <CardContent className="p-8 text-center">
-                    <p className="text-muted-foreground">No responses found for this task.</p>
+                    <p className="text-muted-foreground">No responses found for this task. Once customers submit their answers, they will appear here.</p>
                   </CardContent>
                 </Card>
               )}

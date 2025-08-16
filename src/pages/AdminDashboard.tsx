@@ -56,8 +56,13 @@ const AdminDashboard = () => {
 
   const checkUserRole = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        toast({
+          title: "Session Error",
+          description: "Could not verify your session. Please log in again.",
+          variant: "destructive",
+        });
         window.location.href = '/auth';
         return;
       }
@@ -66,12 +71,12 @@ const AdminDashboard = () => {
         .rpc('get_current_user_role');
 
       if (roleError) {
-        console.error('Error fetching user role:', roleError);
         toast({
           title: "Access Denied",
-          description: "Unable to verify admin access.",
+          description: "Unable to verify admin access. Please check your connection.",
           variant: "destructive",
         });
+        window.location.href = '/auth';
         return;
       }
 
@@ -88,7 +93,11 @@ const AdminDashboard = () => {
       setUserRole(roleData);
       fetchData();
     } catch (error) {
-      console.error('Error checking user role:', error);
+      toast({
+        title: "Network Error",
+        description: "Failed to connect to the server. Please check your internet connection and try again.",
+        variant: "destructive",
+      });
       window.location.href = '/auth';
     }
   };
@@ -122,12 +131,13 @@ const AdminDashboard = () => {
       setApplications(applicationsData || []);
       setPayments(paymentsData || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
       toast({
-        title: "Error",
-        description: "Failed to load admin data.",
+        title: "Error Fetching Data",
+        description: "Failed to load admin data. Please check your connection and try again.",
         variant: "destructive",
       });
+      setApplications([]);
+      setPayments([]);
     } finally {
       setLoading(false);
     }
@@ -315,7 +325,7 @@ const AdminDashboard = () => {
                 <CardContent>
                   <div className="space-y-4">
                     {applications.length === 0 ? (
-                      <p className="text-muted-foreground">No applications found.</p>
+                      <p className="text-muted-foreground">No user applications found. New applications will appear here when customers apply for a plan.</p>
                     ) : (
                       applications.map((application) => (
                         <div key={application.id} className="flex items-center justify-between p-4 border rounded-lg">
@@ -378,7 +388,7 @@ const AdminDashboard = () => {
                 <CardContent>
                   <div className="space-y-4">
                     {payments.length === 0 ? (
-                      <p className="text-muted-foreground">No payments found.</p>
+                      <p className="text-muted-foreground">No payment submissions found. Customer payment submissions will appear here for review.</p>
                     ) : (
                       payments.map((payment) => (
                         <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg">
