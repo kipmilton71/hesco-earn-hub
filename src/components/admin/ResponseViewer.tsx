@@ -101,8 +101,8 @@ export const ResponseViewer = () => {
         .from('user_responses')
         .select(`
           *,
-          profiles!user_responses_user_id_fkey (email),
-          questions!user_responses_question_id_fkey (question_text, question_type, order_index)
+          profiles (email),
+          questions (question_text, question_type, order_index)
         `)
         .eq('daily_task_id', taskId)
         .order('created_at', { ascending: false });

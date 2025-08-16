@@ -37,19 +37,19 @@ const Pending = () => {
       .from('user_applications')
       .select(`
         *,
-        subscription_plans!user_applications_subscription_plan_id_fkey (
+        subscription_plans (
           name,
           price,
           currency
         ),
-        payment_submissions!payment_submissions_user_application_id_fkey (
+        payment_submissions (
           amount,
           status,
           created_at
         )
       `)
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching application:', error);
@@ -93,46 +93,7 @@ const Pending = () => {
     };
 
     initializePage();
-
-    // Set up real-time listener for status changes
-    const channel = supabase
-      .channel('application-status-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'user_applications'
-        },
-        async (payload) => {
-          if (payload.new.user_id === user?.id) {
-            const updatedApp = await fetchApplication(user.id);
-            if (updatedApp) {
-              setApplication(updatedApp);
-              
-              if (updatedApp.status === 'approved') {
-                toast({
-                  title: "Application Approved!",
-                  description: "Your subscription has been activated. Redirecting to dashboard...",
-                });
-                setTimeout(() => navigate('/dashboard'), 2000);
-              } else if (updatedApp.status === 'rejected') {
-                toast({
-                  title: "Application Rejected",
-                  description: "Please contact support for more information",
-                  variant: "destructive"
-                });
-              }
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [navigate, toast, user]);
+  }, [navigate, toast]);
 
   const handleRefresh = async () => {
     if (!user) return;
