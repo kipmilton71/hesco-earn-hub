@@ -6,8 +6,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Eye, EyeOff, Gift } from 'lucide-react';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -16,8 +16,10 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
+  const [referralCode, setReferralCode] = useState('');
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     // Check if user is already logged in
@@ -40,7 +42,13 @@ const Auth = () => {
         }
     };
     checkUser();
-  }, [navigate]);
+
+    // Check for referral code in URL
+    const ref = searchParams.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+    }
+  }, [navigate, searchParams]);
 
   const validateForm = () => {
     if (!email) {
@@ -167,6 +175,30 @@ const Auth = () => {
           if (profileError) {
             console.error('Profile creation error:', profileError);
             // Don't throw error here, let user continue
+          }
+
+          // Handle referral if provided
+          if (referralCode && referralCode !== data.user.id) {
+            try {
+              const { error: referralError } = await supabase
+                .from('referrals')
+                .insert({
+                  referrer_id: referralCode,
+                  referred_id: data.user.id,
+                  level: 1,
+                  status: 'active'
+                });
+
+              if (referralError) {
+                console.error('Referral creation error:', referralError);
+                // Don't throw error here, let user continue
+              } else {
+                console.log('Referral created successfully');
+              }
+            } catch (error) {
+              console.error('Error creating referral:', error);
+              // Don't throw error here, let user continue
+            }
           }
         }
 
@@ -310,6 +342,25 @@ const Auth = () => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
               </div>
+              {referralCode && (
+                <div className="space-y-2">
+                  <Label htmlFor="referral-code" className="flex items-center space-x-2">
+                    <Gift className="h-4 w-4 text-green-600" />
+                    <span>Referral Code (Optional)</span>
+                  </Label>
+                  <Input
+                    id="referral-code"
+                    type="text"
+                    placeholder="Enter referral code"
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value)}
+                    className="border-green-200 bg-green-50"
+                  />
+                  <p className="text-xs text-green-600">
+                    You'll earn rewards when your referral subscribes!
+                  </p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
 

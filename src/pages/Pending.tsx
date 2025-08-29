@@ -37,7 +37,7 @@ const Pending = () => {
       .from('user_applications')
       .select(`
         *,
-        subscription_plans (
+        subscription_plans:subscription_plan_id!fk_user_applications_subscription_plan_id (
           name,
           price,
           currency
@@ -78,7 +78,8 @@ const Pending = () => {
           description: "Please select a subscription plan first",
           variant: "destructive"
         });
-        navigate('/select-plan');
+        // Do not redirect to /select-plan anymore
+        setLoading(false);
         return;
       }
 

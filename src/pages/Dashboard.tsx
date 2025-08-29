@@ -1,469 +1,793 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
-import { LogOut, User, CreditCard, Calendar, Loader2 } from 'lucide-react';
-import { DailyTask } from '@/components/customer/DailyTask';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  getUserBalance, 
+  getCurrentUserPlanAmount, 
+  completeVideoTask,
+  completeSurveyTask,
+  getActiveVideoLinks,
+  getActiveDailyTasks,
+  getTodayTaskCompletions,
+  getReferralRewards,
+  getUserReferrals,
+  getWithdrawalRequests,
+  createWithdrawalRequest,
+  getTransactionHistory,
+  isWithdrawalDay,
+  calculateMaxWithdrawal,
+  calculateTax,
+  calculateNetAmount
+} from '@/lib/api';
+import { 
+  Play, 
+  FileText, 
+  Users, 
+  DollarSign, 
+  TrendingUp, 
+  Calendar,
+  Gift,
+  Wallet,
+  History,
+  ArrowRight,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  LogOut
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
-interface UserProfile {
+interface UserBalance {
   id: string;
-  email: string;
-  phone?: string;
+  user_id: string;
+  plan_balance: number;
+  available_balance: number;
+  total_earned: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface TaskCompletion {
+  id: string;
+  user_id: string;
+  task_type: 'video' | 'survey';
+  task_date: string;
+  reward_amount: number;
+  status: string;
   created_at: string;
 }
 
-interface UserApplication {
+interface ReferralReward {
   id: string;
+  referrer_id: string;
+  referred_id: string;
+  referral_level: number;
+  referred_plan_amount: number;
+  reward_amount: number;
   status: string;
   created_at: string;
-  subscription_plans: {
-    name: string;
-    price: number;
-    currency: string;
-    duration_months: number;
+  referred: {
+    id: string;
+    email: string;
+    created_at: string;
   };
 }
 
-interface UserPlanSelection {
+interface WithdrawalRequest {
   id: string;
-  selected_plan: string;
-  selected_at: string;
+  user_id: string;
+  amount: number;
+  tax_amount: number;
+  net_amount: number;
+  mpesa_number: string;
+  status: string;
+  created_at: string;
 }
 
-const Dashboard = () => {
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [application, setApplication] = useState<UserApplication | null>(null);
-  const [planSelection, setPlanSelection] = useState<UserPlanSelection | null>(null);
+interface BalanceTransaction {
+  id: string;
+  user_id: string;
+  transaction_type: string;
+  amount: number;
+  balance_before: number;
+  balance_after: number;
+  description: string;
+  created_at: string;
+}
+
+export default function Dashboard() {
+  const { user } = useAuth();
+  const [userBalance, setUserBalance] = useState<UserBalance | null>(null);
+  const [planAmount, setPlanAmount] = useState<number>(0);
+  const [todayTasks, setTodayTasks] = useState<TaskCompletion[]>([]);
+  const [referralRewards, setReferralRewards] = useState<ReferralReward[]>([]);
+  const [userReferrals, setUserReferrals] = useState<any[]>([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
+  const [transactions, setTransactions] = useState<BalanceTransaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showBillingModal, setShowBillingModal] = useState(false);
+  const [taskLoading, setTaskLoading] = useState(false);
+  const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [mpesaNumber, setMpesaNumber] = useState('');
+  const [withdrawalLoading, setWithdrawalLoading] = useState(false);
 
   useEffect(() => {
-    const initializeDashboard = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    if (user) {
+      loadDashboardData();
+    }
+  }, [user]);
+
+  const [videoLinks, setVideoLinks] = useState<any[]>([]);
+  const [dailyTasks, setDailyTasks] = useState<any[]>([]);
+  const [selectedVideoLink, setSelectedVideoLink] = useState<string>('');
+  const [selectedDailyTask, setSelectedDailyTask] = useState<string>('');
+
+  const loadDashboardData = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      const [
+        balance,
+        plan,
+        tasks,
+        rewards,
+        referrals,
+        withdrawals,
+        history,
+        videos,
+        surveys
+      ] = await Promise.all([
+        getUserBalance(user.id),
+        getCurrentUserPlanAmount(user.id),
+        getTodayTaskCompletions(user.id),
+        getReferralRewards(user.id),
+        getUserReferrals(user.id),
+        getWithdrawalRequests(user.id),
+        getTransactionHistory(user.id),
+        getActiveVideoLinks(),
+        getActiveDailyTasks()
+      ]);
+
+      setUserBalance(balance);
+      setPlanAmount(plan);
+      setTodayTasks(tasks);
+      setReferralRewards(rewards);
+      setUserReferrals(referrals);
+      setWithdrawalRequests(withdrawals);
+      setTransactions(history);
+      setVideoLinks(videos);
+      setDailyTasks(surveys);
       
-      if (!session) {
-        navigate('/auth');
-        return;
+      // Set default selections
+      if (videos.length > 0 && !selectedVideoLink) {
+        setSelectedVideoLink(videos[0].id);
       }
-
-      setUser(session.user);
-
-      // Check if user is admin first
-      const { data: roleData, error: roleError } = await supabase
-        .rpc('get_current_user_role');
-
-      if (roleError) {
-        console.error('Error checking user role:', roleError);
-        // Continue with normal flow if role check fails
-      } else if (roleData === 'admin') {
-        navigate('/admin');
-        return;
+      if (surveys.length > 0 && !selectedDailyTask) {
+        setSelectedDailyTask(surveys[0].id);
       }
-
-      // Fetch user profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
-      }
-
-      setProfile(profileData);
-
-      // Fetch user application
-      const { data: applicationData, error } = await supabase
-        .from('user_applications')
-        .select(`
-          *,
-          subscription_plans (
-            name,
-            price,
-            currency,
-            duration_months
-          )
-        `)
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching application:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load user data",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
-             if (!applicationData) {
-         // No application found, redirect to plan selection
-         toast({
-           title: "Welcome!",
-           description: "Please select a subscription plan to get started.",
-         });
-         navigate('/select-plan');
-         return;
-       }
-
-      if (applicationData.status === 'pending') {
-        // Application is pending, redirect to pending page
-        navigate('/pending');
-        return;
-      }
-
-      if (applicationData.status === 'rejected') {
-        // Application was rejected, redirect to plan selection
-        toast({
-          title: "Application Status",
-          description: "Your previous application was rejected. Please select a new plan.",
-          variant: "destructive"
-        });
-        navigate('/select-plan');
-        return;
-      }
-
-      if (applicationData.status !== 'approved') {
-        // Any other status (like suspended) should redirect to pending
-        navigate('/pending');
-        return;
-      }
-
-      setApplication(applicationData);
-
-      // Fetch user's plan selection
-      const { data: planSelectionData, error: planError } = await supabase
-        .from('user_plan_selections')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-
-      if (planError) {
-        console.error('Error fetching plan selection:', planError);
-      }
-
-      setPlanSelection(planSelectionData);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
       setLoading(false);
-    };
+    }
+  };
 
-    initializeDashboard();
-
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        navigate('/auth');
+  const handleVideoTaskCompletion = async () => {
+    if (!user || !selectedVideoLink) return;
+    
+    try {
+      setTaskLoading(true);
+      const reward = await completeVideoTask(user.id, selectedVideoLink);
+      
+      if (reward) {
+        toast.success(`Video completed! Earned ${reward} KSh`);
+        await loadDashboardData(); // Refresh data
+      } else {
+        toast.error('Failed to complete video task. Please try again.');
       }
-    });
+    } catch (error: any) {
+      console.error('Error completing video task:', error);
+      toast.error(error.message || 'Failed to complete video task');
+    } finally {
+      setTaskLoading(false);
+    }
+  };
 
-    return () => subscription.unsubscribe();
-  }, [navigate, toast]);
+  const handleSurveyTaskCompletion = async () => {
+    if (!user || !selectedDailyTask) return;
+    
+    try {
+      setTaskLoading(true);
+      const reward = await completeSurveyTask(user.id, selectedDailyTask);
+      
+      if (reward) {
+        toast.success(`Survey completed! Earned ${reward} KSh`);
+        await loadDashboardData(); // Refresh data
+      } else {
+        toast.error('Failed to complete survey task. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Error completing survey task:', error);
+      toast.error(error.message || 'Failed to complete survey task');
+    } finally {
+      setTaskLoading(false);
+    }
+  };
+
+  const handleWithdrawal = async () => {
+    if (!user || !userBalance) return;
+    
+    const amount = parseFloat(withdrawalAmount);
+    if (!amount || amount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    if (!mpesaNumber) {
+      toast.error('Please enter your M-Pesa number');
+      return;
+    }
+
+    if (!isWithdrawalDay()) {
+      toast.error('Withdrawals are only allowed on Saturdays');
+      return;
+    }
+
+    const maxWithdrawal = calculateMaxWithdrawal(planAmount, userBalance.available_balance);
+    if (amount > maxWithdrawal) {
+      toast.error(`Maximum withdrawal amount is ${maxWithdrawal} KSh`);
+      return;
+    }
+
+    if (amount > userBalance.available_balance) {
+      toast.error('Insufficient available balance');
+      return;
+    }
+
+    try {
+      setWithdrawalLoading(true);
+      const withdrawalId = await createWithdrawalRequest(user.id, amount, mpesaNumber);
+      
+      if (withdrawalId) {
+        toast.success('Withdrawal request submitted successfully!');
+        setWithdrawalAmount('');
+        setMpesaNumber('');
+        await loadDashboardData(); // Refresh data
+      } else {
+        toast.error('Failed to submit withdrawal request');
+      }
+    } catch (error: any) {
+      console.error('Error creating withdrawal request:', error);
+      toast.error(error.message || 'Failed to submit withdrawal request');
+    } finally {
+      setWithdrawalLoading(false);
+    }
+  };
+
+  const getTaskReward = (taskType: 'video' | 'survey'): number => {
+    switch (planAmount) {
+      case 500:
+        return taskType === 'video' ? 15 : 10;
+      case 1000:
+        return taskType === 'video' ? 30 : 20;
+      case 2000:
+        return taskType === 'video' ? 50 : 25;
+      case 5000:
+        return taskType === 'video' ? 70 : 30;
+      default:
+        return 0;
+    }
+  };
+
+  const isTaskCompleted = (taskType: 'video' | 'survey'): boolean => {
+    return todayTasks.some(task => task.task_type === taskType);
+  };
+
+  const isVideoCompleted = (): boolean => {
+    return todayTasks.some(task => task.task_type === 'video');
+  };
+
+  const isSurveyCompleted = (): boolean => {
+    return todayTasks.some(task => task.task_type === 'survey');
+  };
+
+  const getTotalReferralEarnings = (): number => {
+    return referralRewards.reduce((total, reward) => total + reward.reward_amount, 0);
+  };
+
+  const getTotalTaskEarnings = (): number => {
+    return todayTasks.reduce((total, task) => total + task.reward_amount, 0);
+  };
+
+  const formatCurrency = (amount: number): string => {
+    return `${amount.toFixed(2)} KSh`;
+  };
+
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      toast({
-        title: "Logged Out",
-        description: "You have been successfully logged out"
-      });
-      navigate('/');
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to logout",
-        variant: "destructive"
-      });
+      toast.success('Logged out successfully');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast.error('Failed to logout');
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
       </div>
     );
   }
 
-  // Redirect unverified users to /pending
-  if (application && application.status !== 'approved') {
-    useEffect(() => {
-      navigate('/pending');
-    }, [navigate]);
-    return null;
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-hero">
-      {/* Header */}
-      <div className="bg-card/80 backdrop-blur-sm border-b">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                Hesco Technologies
-              </h1>
-              <p className="text-muted-foreground">Dashboard</p>
-            </div>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
-          </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600">Welcome back, {user?.email}</p>
         </div>
+        <Button 
+          onClick={handleLogout}
+          variant="outline"
+          className="flex items-center space-x-2"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Logout</span>
+        </Button>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Welcome Card */}
-          <Card className="lg:col-span-2 shadow-card">
+      {/* Balance Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Plan Balance</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(userBalance?.plan_balance || 0)}</div>
+            <p className="text-xs text-muted-foreground">Locked subscription balance</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Available Balance</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(userBalance?.available_balance || 0)}</div>
+            <p className="text-xs text-muted-foreground">Withdrawable balance</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Earned</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(userBalance?.total_earned || 0)}</div>
+            <p className="text-xs text-muted-foreground">Lifetime earnings</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="tasks" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="tasks">Daily Tasks</TabsTrigger>
+          <TabsTrigger value="referrals">Referrals</TabsTrigger>
+          <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+        </TabsList>
+
+        {/* Daily Tasks Tab */}
+        <TabsContent value="tasks" className="space-y-6">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Welcome Back!
-              </CardTitle>
+              <CardTitle>Daily Tasks</CardTitle>
+              <CardDescription>
+                Complete daily tasks to earn rewards. Each task can be completed once per day.
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-lg">
-                  Hello, <span className="font-semibold">{user?.email}</span>
-                </p>
-                <p className="text-muted-foreground">
-                  {application && application.status === 'approved'
-                    ? 'Your account is verified and active. You have full access to all features.'
-                    : 'Your account is not yet verified. Please complete payment and wait for approval.'}
-                </p>
-                <div className="flex items-center gap-2 mt-4">
-                  {application && application.status === 'approved' ? (
-                    <Badge variant="outline" className="text-secondary border-secondary">
-                      ✅ Verified Account
+            <CardContent className="space-y-4">
+              {/* Video Task */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Play className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">Watch Video</h3>
+                    <p className="text-sm text-gray-600">Watch a short video to earn rewards</p>
+                    <p className="text-sm font-medium text-green-600">
+                      Reward: {formatCurrency(getTaskReward('video'))}
+                    </p>
+                    {videoLinks.length > 0 && (
+                      <div className="mt-2">
+                        <select
+                          value={selectedVideoLink}
+                          onChange={(e) => setSelectedVideoLink(e.target.value)}
+                          className="w-full p-2 border rounded text-sm"
+                        >
+                          {videoLinks.map((video) => (
+                            <option key={video.id} value={video.id}>
+                              {video.title} ({video.duration_minutes} min)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {isVideoCompleted() ? (
+                    <Badge variant="secondary" className="flex items-center space-x-1">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Completed</span>
                     </Badge>
                   ) : (
-                    <Badge variant="destructive">
-                      ⏳ Pending Verification
-                    </Badge>
+                    <Button 
+                      onClick={handleVideoTaskCompletion}
+                      disabled={taskLoading || videoLinks.length === 0}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {taskLoading ? 'Processing...' : 'Complete'}
+                    </Button>
                   )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Account Status */}
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="text-lg">Account Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-secondary rounded-full"></div>
-                  <span className="text-sm">
-                    {application && application.status === 'approved' ? 'Active Subscription' : 'Pending Approval'}
-                  </span>
+              {/* Survey Task */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <FileText className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">Complete Survey</h3>
+                    <p className="text-sm text-gray-600">Fill out a quick survey to earn rewards</p>
+                    <p className="text-sm font-medium text-green-600">
+                      Reward: {formatCurrency(getTaskReward('survey'))}
+                    </p>
+                    {dailyTasks.length > 0 && (
+                      <div className="mt-2">
+                        <select
+                          value={selectedDailyTask}
+                          onChange={(e) => setSelectedDailyTask(e.target.value)}
+                          className="w-full p-2 border rounded text-sm"
+                        >
+                          {dailyTasks.map((task) => (
+                            <option key={task.id} value={task.id}>
+                              {task.title}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-secondary rounded-full"></div>
-                  <span className="text-sm">
-                    {application && application.status === 'approved' ? 'Full Access' : 'Limited Access'}
-                  </span>
+                <div className="flex items-center space-x-2">
+                  {isSurveyCompleted() ? (
+                    <Badge variant="secondary" className="flex items-center space-x-1">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Completed</span>
+                    </Badge>
+                  ) : (
+                    <Button 
+                      onClick={handleSurveyTaskCompletion}
+                      disabled={taskLoading || dailyTasks.length === 0}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {taskLoading ? 'Processing...' : 'Complete'}
+                    </Button>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-secondary rounded-full"></div>
-                  <span className="text-sm">
-                    {application && application.status === 'approved' ? 'Verified Payment' : 'Awaiting Payment Verification'}
-                  </span>
+              </div>
+
+              {/* Today's Progress */}
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold mb-2">Today's Progress</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Tasks Completed:</span>
+                    <span>{todayTasks.length}/2</span>
+                  </div>
+                  <Progress value={(todayTasks.length / 2) * 100} className="h-2" />
+                  <div className="flex justify-between text-sm">
+                    <span>Total Earned Today:</span>
+                    <span className="font-medium text-green-600">{formatCurrency(getTotalTaskEarnings())}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </div>
+        </TabsContent>
 
-        {/* Subscription Details */}
-        {application && (
-          <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-4">Subscription Details</h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card className="shadow-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Current Plan
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="font-semibold text-lg">
-                        {application.subscription_plans.name}
-                      </p>
-                      <p className="text-muted-foreground">
-                        {application.subscription_plans.currency} {application.subscription_plans.price.toLocaleString()} 
-                        / {application.subscription_plans.duration_months} month{application.subscription_plans.duration_months > 1 ? 's' : ''}
-                      </p>
-                    </div>
-                    <Badge className="bg-gradient-secondary">
-                      {application.status === 'approved' ? 'Active' : 'Pending'}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
-                    Subscription Info
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Started:</span>
-                      <span>{new Date(application.created_at).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Status:</span>
-                      <Badge variant="outline" className="text-secondary border-secondary">
-                        {application.status}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Duration:</span>
-                      <span>{application.subscription_plans.duration_months} month{application.subscription_plans.duration_months > 1 ? 's' : ''}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* Selected Plan Details */}
-        {planSelection && (
-          <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-4">Your Selected Plan</h2>
-            <Card className="shadow-card">
+        {/* Referrals Tab */}
+        <TabsContent value="referrals" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Referral Stats */}
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
-                  Active Plan: {planSelection.selected_plan.charAt(0).toUpperCase() + planSelection.selected_plan.slice(1)}
+                <CardTitle className="flex items-center space-x-2">
+                  <Users className="h-5 w-5" />
+                  <span>Referral Stats</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between">
+                  <span>Total Referrals:</span>
+                  <span className="font-semibold">{userReferrals.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Total Earnings:</span>
+                  <span className="font-semibold text-green-600">{formatCurrency(getTotalReferralEarnings())}</span>
+                </div>
+                <Separator />
+                <div className="text-sm text-gray-600">
+                  <p>• 1st Level: {formatCurrency(planAmount === 500 ? 25 : planAmount === 1000 ? 50 : planAmount === 2000 ? 100 : 200)}</p>
+                  <p>• 2nd Level: {formatCurrency(planAmount === 500 ? 15 : planAmount === 1000 ? 30 : planAmount === 2000 ? 75 : 150)}</p>
+                  <p>• 3rd Level: {formatCurrency(planAmount === 500 ? 5 : planAmount === 1000 ? 15 : planAmount === 2000 ? 50 : 100)}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Referral Link */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Gift className="h-5 w-5" />
+                  <span>Your Referral Link</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Share this link with friends and earn rewards when they join!
+                  </p>
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={`${window.location.origin}/register?ref=${user?.id}`}
+                      readOnly
+                      className="flex-1 px-3 py-2 border rounded-md text-sm bg-gray-50"
+                    />
+                    <Button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/register?ref=${user?.id}`);
+                        toast.success('Referral link copied!');
+                      }}
+                      size="sm"
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Referral Rewards History */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Referral Rewards History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {referralRewards.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No referral rewards yet</p>
+              ) : (
                 <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Plan Type:</span>
-                    <Badge className="bg-gradient-primary">
-                      {planSelection.selected_plan.charAt(0).toUpperCase() + planSelection.selected_plan.slice(1)}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Selected On:</span>
-                    <span>{new Date(planSelection.selected_at).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Status:</span>
-                    <Badge variant="outline" className="text-secondary border-secondary">
-                      {application && application.status === 'approved' ? 'Active' : 'Pending'}
-                    </Badge>
-                  </div>
+                  {referralRewards.slice(0, 10).map((reward) => (
+                    <div key={reward.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="font-medium">Level {reward.referral_level} Referral</p>
+                        <p className="text-sm text-gray-600">
+                          {reward.referred?.email} • {formatDate(reward.created_at)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-green-600">{formatCurrency(reward.reward_amount)}</p>
+                        <p className="text-xs text-gray-500">Plan: {formatCurrency(reward.referred_plan_amount)}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Withdrawals Tab */}
+        <TabsContent value="withdrawals" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Withdrawal Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Request Withdrawal</CardTitle>
+                <CardDescription>
+                  Withdrawals are only allowed on Saturdays. 15% tax applies.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!isWithdrawalDay() && (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <span className="text-sm text-yellow-800">
+                        Withdrawals are only allowed on Saturdays
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Amount (KSh)</label>
+                    <input
+                      type="number"
+                      value={withdrawalAmount}
+                      onChange={(e) => setWithdrawalAmount(e.target.value)}
+                      placeholder="Enter amount"
+                      className="w-full px-3 py-2 border rounded-md"
+                      disabled={!isWithdrawalDay()}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">M-Pesa Number</label>
+                    <input
+                      type="text"
+                      value={mpesaNumber}
+                      onChange={(e) => setMpesaNumber(e.target.value)}
+                      placeholder="e.g., 254700000000"
+                      className="w-full px-3 py-2 border rounded-md"
+                      disabled={!isWithdrawalDay()}
+                    />
+                  </div>
+
+                  {withdrawalAmount && (
+                    <div className="p-3 bg-gray-50 rounded-lg space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>Amount:</span>
+                        <span>{formatCurrency(parseFloat(withdrawalAmount) || 0)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Tax (15%):</span>
+                        <span>-{formatCurrency(calculateTax(parseFloat(withdrawalAmount) || 0))}</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between font-medium">
+                        <span>Net Amount:</span>
+                        <span className="text-green-600">{formatCurrency(calculateNetAmount(parseFloat(withdrawalAmount) || 0))}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={handleWithdrawal}
+                    disabled={!isWithdrawalDay() || withdrawalLoading || !withdrawalAmount || !mpesaNumber}
+                    className="w-full"
+                  >
+                    {withdrawalLoading ? 'Processing...' : 'Request Withdrawal'}
+                  </Button>
+                </div>
+
+                {userBalance && (
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm font-medium mb-1">Maximum Withdrawal</p>
+                    <p className="text-lg font-bold text-blue-600">
+                      {formatCurrency(calculateMaxWithdrawal(planAmount, userBalance.available_balance))}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Base: {formatCurrency(planAmount === 500 ? 125 : planAmount === 1000 ? 250 : planAmount === 2000 ? 325 : 500)} + Available Balance
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Withdrawal History */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Withdrawal History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {withdrawalRequests.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">No withdrawal requests yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {withdrawalRequests.map((request) => (
+                      <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <p className="font-medium">{formatCurrency(request.amount)}</p>
+                          <p className="text-sm text-gray-600">
+                            {request.mpesa_number} • {formatDate(request.created_at)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <Badge 
+                            variant={
+                              request.status === 'completed' ? 'default' :
+                              request.status === 'processing' ? 'secondary' :
+                              request.status === 'rejected' ? 'destructive' : 'outline'
+                            }
+                          >
+                            {request.status}
+                          </Badge>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Net: {formatCurrency(request.net_amount)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
-        )}
+        </TabsContent>
 
-        {/* Daily Tasks Section - Only show if verified */}
-        {application && application.status === 'approved' && (
-          <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-4">Daily Tasks</h2>
-            <DailyTask />
-          </div>
-        )}
-
-        {/* Quick Actions */}
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            <Card className="shadow-card hover:shadow-glow transition-shadow cursor-pointer" onClick={() => setShowProfileModal(true)}>
-              <CardContent className="pt-6 text-center">
-                <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <User className="h-6 w-6 text-white" />
+        {/* History Tab */}
+        <TabsContent value="history" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <History className="h-5 w-5" />
+                <span>Transaction History</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {transactions.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No transactions yet</p>
+              ) : (
+                <div className="space-y-3">
+                  {transactions.map((transaction) => (
+                    <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="font-medium capitalize">
+                          {transaction.transaction_type.replace('_', ' ')}
+                        </p>
+                        <p className="text-sm text-gray-600">{transaction.description}</p>
+                        <p className="text-xs text-gray-500">{formatDate(transaction.created_at)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-semibold ${transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {transaction.amount >= 0 ? '+' : ''}{formatCurrency(transaction.amount)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Balance: {formatCurrency(transaction.balance_after)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <h3 className="font-semibold">Profile Settings</h3>
-                <p className="text-sm text-muted-foreground">Manage your account</p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card hover:shadow-glow transition-shadow cursor-pointer" onClick={() => setShowBillingModal(true)}>
-              <CardContent className="pt-6 text-center">
-                <div className="w-12 h-12 bg-gradient-secondary rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <CreditCard className="h-6 w-6 text-white" />
-                </div>
-                <h3 className="font-semibold">Billing History</h3>
-                <p className="text-sm text-muted-foreground">View payment history</p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card hover:shadow-glow transition-shadow cursor-pointer" onClick={() => navigate('/select-plan')}>
-              <CardContent className="pt-6 text-center">
-                <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <Calendar className="h-6 w-6 text-white" />
-                </div>
-                <h3 className="font-semibold">Upgrade Plan</h3>
-                <p className="text-sm text-muted-foreground">Change subscription</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-
-      {/* Profile Settings Modal */}
-      <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Profile Settings</DialogTitle>
-            <DialogDescription>Manage your account information below.</DialogDescription>
-          </DialogHeader>
-          {/* TODO: Add profile form here */}
-          <div className="my-4">Profile management coming soon.</div>
-          <DialogClose asChild>
-            <Button variant="outline">Close</Button>
-          </DialogClose>
-        </DialogContent>
-      </Dialog>
-
-      {/* Billing History Modal */}
-      <Dialog open={showBillingModal} onOpenChange={setShowBillingModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Billing History</DialogTitle>
-            <DialogDescription>View your payment history below.</DialogDescription>
-          </DialogHeader>
-          {/* TODO: Add billing history table here */}
-          <div className="my-4">Billing history coming soon.</div>
-          <DialogClose asChild>
-            <Button variant="outline">Close</Button>
-          </DialogClose>
-        </DialogContent>
-      </Dialog>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
-};
-
-export default Dashboard;
+}

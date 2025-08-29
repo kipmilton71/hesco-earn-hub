@@ -45,7 +45,8 @@ const Payment = () => {
       setUser(session.user);
 
       if (!planId) {
-        navigate('/select-plan');
+        // Do not redirect to /select-plan anymore
+        setLoading(false);
         return;
       }
 
@@ -62,7 +63,8 @@ const Payment = () => {
           description: "Selected plan not found",
           variant: "destructive"
         });
-        navigate('/select-plan');
+        // Do not redirect to /select-plan anymore
+        setLoading(false);
         return;
       }
 
@@ -83,7 +85,8 @@ const Payment = () => {
           description: "Failed to load application data",
           variant: "destructive"
         });
-        navigate('/select-plan');
+        // Do not redirect to /select-plan anymore
+        setLoading(false);
         return;
       }
 
@@ -93,7 +96,8 @@ const Payment = () => {
           description: "No application found for this plan. Please apply first.",
           variant: "destructive"
         });
-        navigate('/select-plan');
+        // Do not redirect to /select-plan anymore
+        setLoading(false);
         return;
       }
 

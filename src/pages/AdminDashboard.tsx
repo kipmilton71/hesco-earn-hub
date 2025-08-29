@@ -1,449 +1,627 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TaskManager } from "@/components/admin/TaskManager";
-import { ResponseViewer } from "@/components/admin/ResponseViewer";
-import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Pause, Users, FileText, DollarSign, LogOut } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { 
+  getAllWithdrawalRequests, 
+  updateWithdrawalStatus,
+  getAllUserBalances,
+  getAllReferrals,
+  getAllTaskCompletions
+} from '@/lib/api';
+import { VideoLinkManager } from '@/components/admin/VideoLinkManager';
+import { SurveyTaskManager } from '@/components/admin/SurveyTaskManager';
+import { 
+  Users, 
+  DollarSign, 
+  TrendingUp, 
+  Calendar,
+  Gift,
+  Wallet,
+  History,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Eye,
+  Edit,
+  BarChart3,
+  LogOut
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
-interface UserApplication {
+interface WithdrawalRequest {
   id: string;
   user_id: string;
-  subscription_plan_id: string;
-  status: string;
-  created_at: string;
-  subscription_plans: {
-    name: string;
-    price: number;
-    currency: string;
-  };
-  profiles: {
-    email: string;
-    phone: string;
-  };
-}
-
-interface PaymentSubmission {
-  id: string;
-  user_id: string;
-  mpesa_number: string;
   amount: number;
+  tax_amount: number;
+  net_amount: number;
+  mpesa_number: string;
   status: string;
   created_at: string;
-  profiles: {
+  user: {
+    id: string;
     email: string;
-  };
-  subscription_plans: {
-    name: string;
+    phone?: string;
   };
 }
 
-const AdminDashboard = () => {
-  const [applications, setApplications] = useState<UserApplication[]>([]);
-  const [payments, setPayments] = useState<PaymentSubmission[]>([]);
+interface UserBalance {
+  id: string;
+  user_id: string;
+  plan_balance: number;
+  available_balance: number;
+  total_earned: number;
+  created_at: string;
+  user: {
+    id: string;
+    email: string;
+    phone?: string;
+  };
+}
+
+interface Referral {
+  id: string;
+  referrer_id: string;
+  referred_id: string;
+  level: number;
+  status: string;
+  created_at: string;
+  referrer: {
+    id: string;
+    email: string;
+    created_at: string;
+  };
+  referred: {
+    id: string;
+    email: string;
+    created_at: string;
+  };
+}
+
+interface TaskCompletion {
+  id: string;
+  user_id: string;
+  task_type: string;
+  task_date: string;
+  reward_amount: number;
+  status: string;
+  created_at: string;
+  user: {
+    id: string;
+    email: string;
+  };
+}
+
+export default function AdminDashboard() {
+  const { user } = useAuth();
+  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
+  const [userBalances, setUserBalances] = useState<UserBalance[]>([]);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [taskCompletions, setTaskCompletions] = useState<TaskCompletion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalRequest | null>(null);
+  const [processingWithdrawal, setProcessingWithdrawal] = useState(false);
+  const [newStatus, setNewStatus] = useState<string>('');
+  const [notes, setNotes] = useState<string>('');
 
   useEffect(() => {
-    checkUserRole();
-  }, []);
-
-  const checkUserRole = async () => {
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        toast({
-          title: "Session Error",
-          description: "Could not verify your session. Please log in again.",
-          variant: "destructive",
-        });
-        window.location.href = '/auth';
-        return;
-      }
-
-      const { data: roleData, error: roleError } = await supabase
-        .rpc('get_current_user_role');
-
-      if (roleError) {
-        toast({
-          title: "Access Denied",
-          description: "Unable to verify admin access. Please check your connection.",
-          variant: "destructive",
-        });
-        window.location.href = '/auth';
-        return;
-      }
-
-      if (roleData !== 'admin') {
-        toast({
-          title: "Access Denied",
-          description: "You need admin privileges to access this page.",
-          variant: "destructive",
-        });
-        window.location.href = '/dashboard';
-        return;
-      }
-
-      setUserRole(roleData);
-      fetchData();
-    } catch (error) {
-      toast({
-        title: "Network Error",
-        description: "Failed to connect to the server. Please check your internet connection and try again.",
-        variant: "destructive",
-      });
-      window.location.href = '/auth';
+    if (user) {
+      loadAdminData();
     }
-  };
+  }, [user]);
 
-  const fetchData = async () => {
+  const loadAdminData = async () => {
     try {
-      // Fetch user applications with profile and plan data
-      const { data: applicationsData, error: applicationsError } = await supabase
-        .from('user_applications')
-        .select(`
-          *,
-          subscription_plans (name, price, currency),
-          profiles (email, phone)
-        `)
-        .order('created_at', { ascending: false });
+      setLoading(true);
+      const [withdrawals, balances, referralData, tasks] = await Promise.all([
+        getAllWithdrawalRequests(),
+        getAllUserBalances(),
+        getAllReferrals(),
+        getAllTaskCompletions()
+      ]);
 
-      if (applicationsError) throw applicationsError;
-
-      // Fetch payment submissions with profile and plan data
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from('payment_submissions')
-        .select(`
-          *,
-          profiles (email),
-          subscription_plans (name)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (paymentsError) throw paymentsError;
-
-      setApplications(applicationsData || []);
-      setPayments(paymentsData || []);
+      setWithdrawalRequests(withdrawals);
+      setUserBalances(balances);
+      setReferrals(referralData);
+      setTaskCompletions(tasks);
     } catch (error) {
-      toast({
-        title: "Error Fetching Data",
-        description: "Failed to load admin data. Please check your connection and try again.",
-        variant: "destructive",
-      });
-      setApplications([]);
-      setPayments([]);
+      console.error('Error loading admin data:', error);
+      toast.error('Failed to load admin data');
     } finally {
       setLoading(false);
     }
   };
 
-  const updateApplicationStatus = async (applicationId: string, newStatus: string) => {
+  const handleUpdateWithdrawalStatus = async () => {
+    if (!selectedWithdrawal || !newStatus) return;
+
     try {
-      const { error } = await supabase
-        .from('user_applications')
-        .update({ status: newStatus })
-        .eq('id', applicationId);
-
-      if (error) throw error;
-
-      setApplications(prev => 
-        prev.map(app => 
-          app.id === applicationId ? { ...app, status: newStatus } : app
-        )
+      setProcessingWithdrawal(true);
+      const success = await updateWithdrawalStatus(
+        selectedWithdrawal.id,
+        newStatus as 'processing' | 'completed' | 'rejected',
+        user!.id,
+        notes
       );
 
-      toast({
-        title: "Success",
-        description: `Application ${newStatus} successfully.`,
-      });
-
-      // Refresh data to get updated counts
-      fetchData();
+      if (success) {
+        toast.success('Withdrawal status updated successfully');
+        setSelectedWithdrawal(null);
+        setNewStatus('');
+        setNotes('');
+        await loadAdminData(); // Refresh data
+      } else {
+        toast.error('Failed to update withdrawal status');
+      }
     } catch (error) {
-      console.error('Error updating application:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update application status.",
-        variant: "destructive",
-      });
+      console.error('Error updating withdrawal status:', error);
+      toast.error('Failed to update withdrawal status');
+    } finally {
+      setProcessingWithdrawal(false);
     }
   };
 
-  const updatePaymentStatus = async (paymentId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('payment_submissions')
-        .update({ status: newStatus })
-        .eq('id', paymentId);
+  const getTotalWithdrawals = (): number => {
+    return withdrawalRequests.reduce((total, req) => total + req.amount, 0);
+  };
 
-      if (error) throw error;
+  const getPendingWithdrawals = (): number => {
+    return withdrawalRequests.filter(req => req.status === 'pending').length;
+  };
 
-      setPayments(prev => 
-        prev.map(payment => 
-          payment.id === paymentId ? { ...payment, status: newStatus } : payment
-        )
-      );
+  const getTotalEarnings = (): number => {
+    return userBalances.reduce((total, balance) => total + balance.total_earned, 0);
+  };
 
-      toast({
-        title: "Success",
-        description: `Payment ${newStatus} successfully.`,
-      });
+  const getTotalReferrals = (): number => {
+    return referrals.length;
+  };
 
-      // Refresh data to get updated counts
-      fetchData();
-    } catch (error) {
-      console.error('Error updating payment:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update payment status.",
-        variant: "destructive",
-      });
+  const getTotalTaskCompletions = (): number => {
+    return taskCompletions.length;
+  };
+
+  const formatCurrency = (amount: number): string => {
+    return `${amount.toFixed(2)} KSh`;
+  };
+
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'default';
+      case 'processing':
+        return 'secondary';
+      case 'rejected':
+        return 'destructive';
+      default:
+        return 'outline';
     }
   };
 
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      toast({
-        title: "Logged Out",
-        description: "You have been successfully logged out"
-      });
-      navigate('/');
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to logout",
-        variant: "destructive"
-      });
+      toast.success('Logged out successfully');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast.error('Failed to logout');
     }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { variant: "outline" as const, color: "text-yellow-600" },
-      approved: { variant: "default" as const, color: "text-green-600" },
-      rejected: { variant: "destructive" as const, color: "text-red-600" },
-      suspended: { variant: "secondary" as const, color: "text-gray-600" },
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-    return <Badge variant={config.variant} className={config.color}>{status.toUpperCase()}</Badge>;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
       </div>
     );
   }
 
-  if (userRole !== 'admin') {
-    return null;
-  }
-
-  const pendingApplications = applications.filter(app => app.status === 'pending').length;
-  const totalRevenue = payments.filter(p => p.status === 'verified').reduce((sum, p) => sum + Number(p.amount), 0);
-
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => window.location.href = '/dashboard'}>
-              Back to Dashboard
-            </Button>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
-          </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-gray-600">Welcome back, {user?.email}</p>
         </div>
-
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="applications">Applications</TabsTrigger>
-            <TabsTrigger value="tasks">Daily Tasks</TabsTrigger>
-            <TabsTrigger value="responses">Responses</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Applications</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{pendingApplications}</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{applications.length}</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">KSh {totalRevenue.toLocaleString()}</div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="applications">
-            <div className="grid gap-6">
-              {/* User Applications */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>User Applications</CardTitle>
-                  <CardDescription>Manage user subscription applications</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {applications.length === 0 ? (
-                      <p className="text-muted-foreground">No user applications found. New applications will appear here when customers apply for a plan.</p>
-                    ) : (
-                      applications.map((application) => (
-                        <div key={application.id} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex-1">
-                            <div className="font-medium">{application.profiles?.email}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {application.subscription_plans?.name} - {application.subscription_plans?.currency} {application.subscription_plans?.price}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Applied: {new Date(application.created_at).toLocaleDateString()}
-                              {application.profiles?.phone && ` | Phone: ${application.profiles.phone}`}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            {getStatusBadge(application.status)}
-                            {application.status === 'pending' && (
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => updateApplicationStatus(application.id, 'approved')}
-                                  className="bg-green-600 hover:bg-green-700"
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Approve
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => updateApplicationStatus(application.id, 'rejected')}
-                                >
-                                  <XCircle className="h-4 w-4 mr-1" />
-                                  Reject
-                                </Button>
-                              </div>
-                            )}
-                            {application.status === 'approved' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => updateApplicationStatus(application.id, 'suspended')}
-                              >
-                                <Pause className="h-4 w-4 mr-1" />
-                                Suspend
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Payment Submissions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Payment Submissions</CardTitle>
-                  <CardDescription>Review user payment submissions</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {payments.length === 0 ? (
-                      <p className="text-muted-foreground">No payment submissions found. Customer payment submissions will appear here for review.</p>
-                    ) : (
-                      payments.map((payment) => (
-                        <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex-1">
-                            <div className="font-medium">{payment.profiles?.email}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {payment.subscription_plans?.name} - KSh {Number(payment.amount).toLocaleString()}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              M-Pesa: {payment.mpesa_number} | {new Date(payment.created_at).toLocaleDateString()}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            {getStatusBadge(payment.status)}
-                            {payment.status === 'pending' && (
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => updatePaymentStatus(payment.id, 'verified')}
-                                  className="bg-green-600 hover:bg-green-700"
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Verify
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => updatePaymentStatus(payment.id, 'rejected')}
-                                >
-                                  <XCircle className="h-4 w-4 mr-1" />
-                                  Reject
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="tasks">
-            <TaskManager />
-          </TabsContent>
-
-          <TabsContent value="responses">
-            <ResponseViewer />
-          </TabsContent>
-        </Tabs>
+        <Button 
+          onClick={handleLogout}
+          variant="outline"
+          className="flex items-center space-x-2"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Logout</span>
+        </Button>
       </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Withdrawals</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(getTotalWithdrawals())}</div>
+            <p className="text-xs text-muted-foreground">
+              {getPendingWithdrawals()} pending requests
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(getTotalEarnings())}</div>
+            <p className="text-xs text-muted-foreground">All users combined</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Referrals</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{getTotalReferrals()}</div>
+            <p className="text-xs text-muted-foreground">Referral relationships</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Task Completions</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{getTotalTaskCompletions()}</div>
+            <p className="text-xs text-muted-foreground">Daily tasks completed</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="withdrawals" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="referrals">Referrals</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks</TabsTrigger>
+          <TabsTrigger value="videos">Video Links</TabsTrigger>
+          <TabsTrigger value="surveys">Survey Tasks</TabsTrigger>
+        </TabsList>
+
+        {/* Withdrawals Tab */}
+        <TabsContent value="withdrawals" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Withdrawal Requests</CardTitle>
+              <CardDescription>
+                Manage user withdrawal requests and update their status.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>M-Pesa</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {withdrawalRequests.map((request) => (
+                    <TableRow key={request.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{request.user.email}</p>
+                          <p className="text-sm text-gray-500">{request.user.phone}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{formatCurrency(request.amount)}</p>
+                          <p className="text-sm text-gray-500">
+                            Net: {formatCurrency(request.net_amount)}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{request.mpesa_number}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(request.status)}>
+                          {request.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(request.created_at)}</TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          onClick={() => setSelectedWithdrawal(request)}
+                          className="flex items-center space-x-1"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span>View</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Users Tab */}
+        <TabsContent value="users" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>User Balances</CardTitle>
+              <CardDescription>
+                View all user balances and earnings.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Plan Balance</TableHead>
+                    <TableHead>Available Balance</TableHead>
+                    <TableHead>Total Earned</TableHead>
+                    <TableHead>Joined</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {userBalances.map((balance) => (
+                    <TableRow key={balance.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{balance.user.email}</p>
+                          <p className="text-sm text-gray-500">{balance.user.phone}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{formatCurrency(balance.plan_balance)}</TableCell>
+                      <TableCell className="text-green-600 font-medium">
+                        {formatCurrency(balance.available_balance)}
+                      </TableCell>
+                      <TableCell>{formatCurrency(balance.total_earned)}</TableCell>
+                      <TableCell>{formatDate(balance.created_at)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Referrals Tab */}
+        <TabsContent value="referrals" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Referral Network</CardTitle>
+              <CardDescription>
+                View all referral relationships and their status.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Referrer</TableHead>
+                    <TableHead>Referred</TableHead>
+                    <TableHead>Level</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {referrals.map((referral) => (
+                    <TableRow key={referral.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{referral.referrer.email}</p>
+                          <p className="text-sm text-gray-500">
+                            {formatDate(referral.referrer.created_at)}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{referral.referred.email}</p>
+                          <p className="text-sm text-gray-500">
+                            {formatDate(referral.referred.created_at)}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">Level {referral.level}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={referral.status === 'active' ? 'default' : 'secondary'}>
+                          {referral.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(referral.created_at)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tasks Tab */}
+        <TabsContent value="tasks" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Task Completions</CardTitle>
+              <CardDescription>
+                View all daily task completions and rewards.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Task Type</TableHead>
+                    <TableHead>Reward</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {taskCompletions.map((task) => (
+                    <TableRow key={task.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{task.user.email}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={task.task_type === 'video' ? 'default' : 'secondary'}>
+                          {task.task_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-green-600 font-medium">
+                        {formatCurrency(task.reward_amount)}
+                      </TableCell>
+                      <TableCell>{formatDate(task.task_date)}</TableCell>
+                      <TableCell>
+                        <Badge variant={task.status === 'completed' ? 'default' : 'secondary'}>
+                          {task.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Video Links Tab */}
+        <TabsContent value="videos" className="space-y-6">
+          <VideoLinkManager />
+        </TabsContent>
+
+        {/* Survey Tasks Tab */}
+        <TabsContent value="surveys" className="space-y-6">
+          <SurveyTaskManager />
+        </TabsContent>
+      </Tabs>
+
+      {/* Withdrawal Details Modal */}
+      <Dialog open={!!selectedWithdrawal} onOpenChange={() => setSelectedWithdrawal(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Withdrawal Request Details</DialogTitle>
+            <DialogDescription>
+              Review and update the withdrawal request status.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedWithdrawal && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">User</label>
+                  <p className="text-sm text-gray-600">{selectedWithdrawal.user.email}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">M-Pesa Number</label>
+                  <p className="text-sm text-gray-600">{selectedWithdrawal.mpesa_number}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Amount</label>
+                  <p className="text-sm text-gray-600">{formatCurrency(selectedWithdrawal.amount)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Net Amount</label>
+                  <p className="text-sm text-gray-600">{formatCurrency(selectedWithdrawal.net_amount)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Tax</label>
+                  <p className="text-sm text-gray-600">{formatCurrency(selectedWithdrawal.tax_amount)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Date</label>
+                  <p className="text-sm text-gray-600">{formatDate(selectedWithdrawal.created_at)}</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Current Status</label>
+                <Badge variant={getStatusBadgeVariant(selectedWithdrawal.status)} className="ml-2">
+                  {selectedWithdrawal.status}
+                </Badge>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Update Status</label>
+                <Select value={newStatus} onValueChange={setNewStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select new status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="processing">Processing</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Notes (Optional)</label>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add any notes about this withdrawal..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedWithdrawal(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateWithdrawalStatus}
+                  disabled={!newStatus || processingWithdrawal}
+                >
+                  {processingWithdrawal ? 'Updating...' : 'Update Status'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-export default AdminDashboard;
+}
