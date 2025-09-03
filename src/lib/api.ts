@@ -18,7 +18,7 @@ export const getUserBalance = async (userId: string): Promise<UserBalance | null
     .from('user_balances')
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Error fetching user balance:', error);
@@ -52,10 +52,7 @@ export const createReferral = async (referrerId: string, referredId: string): Pr
 export const getUserReferrals = async (userId: string): Promise<Referral[]> => {
   const { data, error } = await supabase
     .from('referrals')
-    .select(`
-      *,
-      referred:profiles!referrals_referred_id_fkey(id, email, created_at)
-    `)
+    .select('*')
     .eq('referrer_id', userId)
     .order('created_at', { ascending: false });
 
@@ -64,16 +61,24 @@ export const getUserReferrals = async (userId: string): Promise<Referral[]> => {
     return [];
   }
 
-  return data || [];
+  if (!data || data.length === 0) return [];
+  const referredIds = Array.from(new Set(data.map(r => r.referred_id)));
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, email, created_at')
+    .in('id', referredIds);
+  if (profilesError || !profiles) return data as any;
+  const idToProfile = new Map(profiles.map(p => [p.id, p]));
+  return (data as any[]).map(r => ({
+    ...r,
+    referred: idToProfile.get(r.referred_id) || undefined,
+  }));
 };
 
 export const getReferralRewards = async (userId: string): Promise<ReferralReward[]> => {
   const { data, error } = await supabase
     .from('referral_rewards')
-    .select(`
-      *,
-      referred:profiles!referral_rewards_referred_id_fkey(id, email, created_at)
-    `)
+    .select('*')
     .eq('referrer_id', userId)
     .order('created_at', { ascending: false });
 
@@ -82,7 +87,18 @@ export const getReferralRewards = async (userId: string): Promise<ReferralReward
     return [];
   }
 
-  return data || [];
+  if (!data || data.length === 0) return [];
+  const referredIds = Array.from(new Set(data.map(r => r.referred_id)));
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, email, created_at')
+    .in('id', referredIds);
+  if (profilesError || !profiles) return data as any;
+  const idToProfile = new Map(profiles.map(p => [p.id, p]));
+  return (data as any[]).map(r => ({
+    ...r,
+    referred: idToProfile.get(r.referred_id) || undefined,
+  }));
 };
 
 // Video Links API
@@ -243,11 +259,7 @@ export const getTodayTaskCompletions = async (userId: string): Promise<TaskCompl
 
   const { data, error } = await supabase
     .from('task_completions')
-    .select(`
-      *,
-      video_link:video_links(id, title, description),
-      daily_task:daily_tasks(id, title, description)
-    `)
+    .select('*')
     .eq('user_id', userId)
     .eq('task_date', today);
 
@@ -256,7 +268,26 @@ export const getTodayTaskCompletions = async (userId: string): Promise<TaskCompl
     return [];
   }
 
-  return data || [];
+  if (!data || data.length === 0) return [];
+  const videoIds = Array.from(new Set(data.map(d => d.video_link_id).filter(Boolean)));
+  const taskIds = Array.from(new Set(data.map(d => d.daily_task_id).filter(Boolean)));
+  const [videosRes, tasksRes] = await Promise.all([
+    videoIds.length
+      ? supabase.from('video_links').select('id, title, description').in('id', videoIds)
+      : Promise.resolve({ data: [], error: null } as any),
+    taskIds.length
+      ? supabase.from('daily_tasks').select('id, title, description').in('id', taskIds)
+      : Promise.resolve({ data: [], error: null } as any),
+  ]);
+  const videos = (videosRes.data || []) as any[];
+  const tasks = (tasksRes.data || []) as any[];
+  const videoMap = new Map(videos.map(v => [v.id, v]));
+  const taskMap = new Map(tasks.map(t => [t.id, t]));
+  return (data as any[]).map(d => ({
+    ...d,
+    video_link: d.video_link_id ? videoMap.get(d.video_link_id) : undefined,
+    daily_task: d.daily_task_id ? taskMap.get(d.daily_task_id) : undefined,
+  }));
 };
 
 // Withdrawal API
@@ -298,10 +329,7 @@ export const getWithdrawalRequests = async (userId: string): Promise<WithdrawalR
 export const getAllWithdrawalRequests = async (): Promise<WithdrawalRequest[]> => {
   const { data, error } = await supabase
     .from('withdrawal_requests')
-    .select(`
-      *,
-      user:profiles!withdrawal_requests_user_id_fkey(id, email, phone)
-    `)
+    .select('*')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -309,7 +337,14 @@ export const getAllWithdrawalRequests = async (): Promise<WithdrawalRequest[]> =
     return [];
   }
 
-  return data || [];
+  if (!data || data.length === 0) return [];
+  const userIds = Array.from(new Set(data.map(w => w.user_id)));
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, email, phone')
+    .in('id', userIds);
+  const profileMap = profiles && !profilesError ? new Map(profiles.map(p => [p.id, p])) : new Map();
+  return (data as any[]).map(w => ({ ...w, user: profileMap.get(w.user_id) }));
 };
 
 export const updateWithdrawalStatus = async (
@@ -339,10 +374,7 @@ export const updateWithdrawalStatus = async (
 export const getAllUserBalances = async (): Promise<UserBalance[]> => {
   const { data, error } = await supabase
     .from('user_balances')
-    .select(`
-      *,
-      user:profiles!user_balances_user_id_fkey(id, email, phone)
-    `)
+    .select('*')
     .order('total_earned', { ascending: false });
 
   if (error) {
@@ -350,17 +382,20 @@ export const getAllUserBalances = async (): Promise<UserBalance[]> => {
     return [];
   }
 
-  return data || [];
+  if (!data || data.length === 0) return [];
+  const userIds = Array.from(new Set(data.map(b => b.user_id)));
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, email, phone')
+    .in('id', userIds);
+  const profileMap = profiles && !profilesError ? new Map(profiles.map(p => [p.id, p])) : new Map();
+  return (data as any[]).map(b => ({ ...b, user: profileMap.get(b.user_id) }));
 };
 
 export const getAllReferrals = async (): Promise<Referral[]> => {
   const { data, error } = await supabase
     .from('referrals')
-    .select(`
-      *,
-      referrer:profiles!referrals_referrer_id_fkey(id, email, created_at),
-      referred:profiles!referrals_referred_id_fkey(id, email, created_at)
-    `)
+    .select('*')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -368,18 +403,26 @@ export const getAllReferrals = async (): Promise<Referral[]> => {
     return [];
   }
 
-  return data || [];
+  if (!data || data.length === 0) return [];
+  const referrerIds = Array.from(new Set(data.map(r => r.referrer_id)));
+  const referredIds = Array.from(new Set(data.map(r => r.referred_id)));
+  const ids = Array.from(new Set([...referrerIds, ...referredIds]));
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, email, created_at')
+    .in('id', ids);
+  const profileMap = profiles && !profilesError ? new Map(profiles.map(p => [p.id, p])) : new Map();
+  return (data as any[]).map(r => ({
+    ...r,
+    referrer: profileMap.get(r.referrer_id),
+    referred: profileMap.get(r.referred_id),
+  }));
 };
 
 export const getAllTaskCompletions = async (): Promise<TaskCompletion[]> => {
   const { data, error } = await supabase
     .from('task_completions')
-    .select(`
-      *,
-      user:profiles!task_completions_user_id_fkey(id, email),
-      video_link:video_links(id, title, description),
-      daily_task:daily_tasks(id, title, description)
-    `)
+    .select('*')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -387,7 +430,24 @@ export const getAllTaskCompletions = async (): Promise<TaskCompletion[]> => {
     return [];
   }
 
-  return data || [];
+  if (!data || data.length === 0) return [];
+  const userIds = Array.from(new Set(data.map(t => t.user_id)));
+  const videoIds = Array.from(new Set(data.map(t => t.video_link_id).filter(Boolean)));
+  const taskIds = Array.from(new Set(data.map(t => t.daily_task_id).filter(Boolean)));
+  const [profilesRes, videosRes, tasksRes] = await Promise.all([
+    supabase.from('profiles').select('id, email').in('id', userIds),
+    videoIds.length ? supabase.from('video_links').select('id, title, description').in('id', videoIds as string[]) : Promise.resolve({ data: [], error: null } as any),
+    taskIds.length ? supabase.from('daily_tasks').select('id, title, description').in('id', taskIds as string[]) : Promise.resolve({ data: [], error: null } as any),
+  ]);
+  const profileMap = profilesRes.data ? new Map((profilesRes.data as any[]).map(p => [p.id, p])) : new Map();
+  const videoMap = videosRes.data ? new Map((videosRes.data as any[]).map(v => [v.id, v])) : new Map();
+  const taskMap = tasksRes.data ? new Map((tasksRes.data as any[]).map(t => [t.id, t])) : new Map();
+  return (data as any[]).map(t => ({
+    ...t,
+    user: profileMap.get(t.user_id),
+    video_link: t.video_link_id ? videoMap.get(t.video_link_id) : undefined,
+    daily_task: t.daily_task_id ? taskMap.get(t.daily_task_id) : undefined,
+  }));
 };
 
 // Video Links Management API (Admin)

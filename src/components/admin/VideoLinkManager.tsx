@@ -13,6 +13,7 @@ import {
   updateVideoLink, 
   deleteVideoLink 
 } from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 
 interface VideoLink {
   id: string;
@@ -36,6 +37,7 @@ export const VideoLinkManager = () => {
     video_url: '',
     duration_minutes: 1
   });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchVideoLinks();
@@ -56,12 +58,15 @@ export const VideoLinkManager = () => {
 
   const handleCreate = async () => {
     try {
+      setSubmitting(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const adminId = session?.user?.id || null;
       const newVideo = await createVideoLink(
         formData.title,
         formData.description,
         formData.video_url,
         formData.duration_minutes,
-        'admin' // You'll need to get the actual admin user ID
+        adminId || ''
       );
 
       if (newVideo) {
@@ -69,10 +74,14 @@ export const VideoLinkManager = () => {
         setShowCreateDialog(false);
         setFormData({ title: '', description: '', video_url: '', duration_minutes: 1 });
         toast.success('Video link created successfully');
+      } else {
+        toast.error('Failed to create video link');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating video link:', error);
-      toast.error('Failed to create video link');
+      toast.error(error?.message || 'Failed to create video link');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -272,8 +281,8 @@ export const VideoLinkManager = () => {
               <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCreate} disabled={!formData.title || !formData.video_url}>
-                Create
+              <Button onClick={handleCreate} disabled={!formData.title || !formData.video_url || submitting}>
+                {submitting ? 'Creating...' : 'Create'}
               </Button>
             </div>
           </div>

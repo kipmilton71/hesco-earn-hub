@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -104,6 +105,7 @@ interface BalanceTransaction {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [userBalance, setUserBalance] = useState<UserBalance | null>(null);
   const [planAmount, setPlanAmount] = useState<number>(0);
   const [todayTasks, setTodayTasks] = useState<TaskCompletion[]>([]);
@@ -116,11 +118,37 @@ export default function Dashboard() {
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [mpesaNumber, setMpesaNumber] = useState('');
   const [withdrawalLoading, setWithdrawalLoading] = useState(false);
+  const [approved, setApproved] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (user) {
+    const checkApprovalAndLoad = async () => {
+      if (!user) return;
+
+      // Gate: only approved users can view dashboard
+      const { data: app, error } = await supabase
+        .from('user_applications')
+        .select('status')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking application status:', error);
+        setApproved(false);
+        navigate('/pending');
+        return;
+      }
+
+      if (!app || app.status !== 'approved') {
+        setApproved(false);
+        navigate('/pending');
+        return;
+      }
+
+      setApproved(true);
       loadDashboardData();
-    }
+    };
+
+    checkApprovalAndLoad();
   }, [user]);
 
   const [videoLinks, setVideoLinks] = useState<any[]>([]);
@@ -325,13 +353,14 @@ export default function Dashboard() {
     try {
       await supabase.auth.signOut();
       toast.success('Logged out successfully');
+      navigate('/auth');
     } catch (error) {
       console.error('Error logging out:', error);
       toast.error('Failed to logout');
     }
   };
 
-  if (loading) {
+  if (approved === null || loading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center h-64">

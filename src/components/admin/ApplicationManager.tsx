@@ -62,28 +62,10 @@ export const ApplicationManager = () => {
   const fetchApplications = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      // Fetch applications only, then compose related data to avoid PostgREST 400s from embedded relationships
+      const { data: apps, error } = await supabase
         .from('user_applications')
-        .select(`
-          *,
-          profiles!user_applications_user_id_fkey (
-            email,
-            phone
-          ),
-          subscription_plans!user_applications_subscription_plan_id_fkey (
-            name,
-            price,
-            currency
-          ),
-          payment_submissions!payment_submissions_user_application_id_fkey (
-            id,
-            amount,
-            mpesa_number,
-            mpesa_message,
-            status,
-            created_at
-          )
-        `)
+        .select('id, user_id, subscription_plan_id, status, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -92,7 +74,36 @@ export const ApplicationManager = () => {
         return;
       }
 
-      setApplications(data || []);
+      const userIds = Array.from(new Set((apps || []).map(a => a.user_id)));
+      const planIds = Array.from(new Set((apps || []).map(a => a.subscription_plan_id)));
+      const [profilesRes, plansRes, paymentsRes] = await Promise.all([
+        userIds.length ? supabase.from('profiles').select('id, email, phone').in('id', userIds) : Promise.resolve({ data: [], error: null } as any),
+        planIds.length ? supabase.from('subscription_plans').select('id, name, price, currency').in('id', planIds) : Promise.resolve({ data: [], error: null } as any),
+        supabase.from('payment_submissions').select('id, user_application_id, amount, mpesa_number, mpesa_message, status, created_at'),
+      ]);
+
+      const profileMap = new Map((profilesRes.data || []).map((p: any) => [p.id, p]));
+      const planMap = new Map((plansRes.data || []).map((p: any) => [p.id, p]));
+      const paymentsByApp = new Map<string, any[]>();
+      (paymentsRes.data || []).forEach((p: any) => {
+        const arr = paymentsByApp.get(p.user_application_id) || [];
+        arr.push(p);
+        paymentsByApp.set(p.user_application_id, arr);
+      });
+
+      const composed: UserApplication[] = (apps || []).map((a: any) => ({
+        id: a.id,
+        user_id: a.user_id,
+        subscription_plan_id: a.subscription_plan_id,
+        status: a.status,
+        created_at: a.created_at,
+        updated_at: a.updated_at,
+        profiles: profileMap.get(a.user_id) || { email: '', phone: '' },
+        subscription_plans: planMap.get(a.subscription_plan_id) || { name: '', price: 0, currency: 'KSh' },
+        payment_submissions: (paymentsByApp.get(a.id) || []).sort((x, y) => new Date(y.created_at).getTime() - new Date(x.created_at).getTime()),
+      }));
+
+      setApplications(composed);
     } catch (error) {
       console.error('Error fetching applications:', error);
       toast.error('Failed to fetch applications');
@@ -140,6 +151,49 @@ export const ApplicationManager = () => {
           });
         } catch (rewardError) {
           console.error('Error processing referral rewards:', rewardError);
+        }
+
+        // Add paid amount to user's total earnings
+        try {
+          const paidAmount = selectedApplication.payment_submissions[0].amount || 0;
+          if (paidAmount > 0) {
+            const { data: balance, error: balanceError } = await supabase
+              .from('user_balances')
+              .select('*')
+              .eq('user_id', selectedApplication.user_id)
+              .maybeSingle();
+
+            if (balanceError) {
+              console.error('Error fetching user balance:', balanceError);
+            } else if (balance) {
+              const { error: updateBalanceError } = await supabase
+                .from('user_balances')
+                .update({
+                  total_earned: (balance.total_earned || 0) + paidAmount,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', balance.id);
+              if (updateBalanceError) {
+                console.error('Error updating user total earned:', updateBalanceError);
+              }
+            } else {
+              const { error: insertBalanceError } = await supabase
+                .from('user_balances')
+                .insert({
+                  user_id: selectedApplication.user_id,
+                  plan_balance: 0,
+                  available_balance: 0,
+                  total_earned: paidAmount,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                });
+              if (insertBalanceError) {
+                console.error('Error creating user balance with total earned:', insertBalanceError);
+              }
+            }
+          }
+        } catch (earnError) {
+          console.error('Error adding paid amount to total earnings:', earnError);
         }
       }
 

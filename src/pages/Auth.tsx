@@ -26,18 +26,31 @@ const Auth = () => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
               if (session) {
-          // Check if user is admin
-          const { data: roleData, error: roleError } = await supabase
-            .rpc('get_current_user_role');
-          
-          if (roleError) {
-            console.error('Error checking user role:', roleError);
-            // Default to dashboard if role check fails
-            navigate('/dashboard');
-          } else if (roleData === 'admin') {
+          // If user is admin, go to admin; otherwise gate by application status
+          const { data: roleData } = await supabase.rpc('get_current_user_role');
+
+          if (roleData === 'admin') {
             navigate('/admin');
-          } else {
+            return;
+          }
+
+          // Check application status
+          const { data: app, error: appError } = await supabase
+            .from('user_applications')
+            .select('status')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+
+          if (appError) {
+            console.error('Error checking application:', appError);
+            navigate('/pending');
+            return;
+          }
+
+          if (app?.status === 'approved') {
             navigate('/dashboard');
+          } else {
+            navigate('/pending');
           }
         }
     };

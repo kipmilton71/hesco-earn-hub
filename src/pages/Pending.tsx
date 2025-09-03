@@ -33,30 +33,59 @@ const Pending = () => {
   const navigate = useNavigate();
 
   const fetchApplication = async (userId: string) => {
-    const { data, error } = await supabase
+    // Step 1: Fetch the user's application (no embeds to avoid ambiguous relationships)
+    const { data: app, error: appError } = await supabase
       .from('user_applications')
-      .select(`
-        *,
-        subscription_plans:subscription_plan_id!fk_user_applications_subscription_plan_id (
-          name,
-          price,
-          currency
-        ),
-        payment_submissions (
-          amount,
-          status,
-          created_at
-        )
-      `)
+      .select('id, status, created_at, subscription_plan_id')
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (error) {
-      console.error('Error fetching application:', error);
+    if (appError) {
+      console.error('Error fetching application:', appError?.message || appError);
       return null;
     }
 
-    return data;
+    if (!app) {
+      return null;
+    }
+
+    // Step 2: Fetch plan details
+    const { data: plan, error: planError } = await supabase
+      .from('subscription_plans')
+      .select('name, price, currency')
+      .eq('id', app.subscription_plan_id)
+      .single();
+
+    if (planError) {
+      console.error('Error fetching subscription plan:', planError?.message || planError);
+      return null;
+    }
+
+    // Step 3: Fetch payment submissions linked to this application
+    const { data: payments, error: paymentsError } = await supabase
+      .from('payment_submissions')
+      .select('amount, status, created_at')
+      .eq('user_application_id', app.id)
+      .order('created_at', { ascending: false });
+
+    if (paymentsError) {
+      console.error('Error fetching payment submissions:', paymentsError?.message || paymentsError);
+      return null;
+    }
+
+    const composed: Application = {
+      id: app.id,
+      status: app.status,
+      created_at: app.created_at,
+      subscription_plans: {
+        name: plan.name,
+        price: plan.price,
+        currency: plan.currency,
+      },
+      payment_submissions: payments || [],
+    };
+
+    return composed;
   };
 
   useEffect(() => {
