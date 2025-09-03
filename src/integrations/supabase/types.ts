@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      balance_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          created_at: string | null
+          description: string
+          id: string
+          reference_id: string | null
+          reference_table: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          created_at?: string | null
+          description: string
+          id?: string
+          reference_id?: string | null
+          reference_table?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          created_at?: string | null
+          description?: string
+          id?: string
+          reference_id?: string | null
+          reference_table?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_tasks: {
         Row: {
           created_at: string
@@ -212,6 +251,72 @@ export type Database = {
           },
         ]
       }
+      referral_rewards: {
+        Row: {
+          created_at: string | null
+          id: string
+          referral_level: number
+          referred_id: string
+          referred_plan_amount: number
+          referrer_id: string
+          reward_amount: number
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          referral_level: number
+          referred_id: string
+          referred_plan_amount: number
+          referrer_id: string
+          reward_amount: number
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          referral_level?: number
+          referred_id?: string
+          referred_plan_amount?: number
+          referrer_id?: string
+          reward_amount?: number
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          created_at: string | null
+          id: string
+          level: number
+          referred_id: string
+          referrer_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          level: number
+          referred_id: string
+          referrer_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          level?: number
+          referred_id?: string
+          referrer_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       subscription_plans: {
         Row: {
           created_at: string | null
@@ -251,6 +356,39 @@ export type Database = {
         }
         Relationships: []
       }
+      task_completions: {
+        Row: {
+          created_at: string | null
+          id: string
+          reward_amount: number
+          status: string
+          task_date: string
+          task_type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reward_amount: number
+          status?: string
+          task_date: string
+          task_type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reward_amount?: number
+          status?: string
+          task_date?: string
+          task_type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_applications: {
         Row: {
           created_at: string | null
@@ -285,6 +423,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fk_user_applications_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "user_applications_subscription_plan_id_fkey"
             columns: ["subscription_plan_id"]
             isOneToOne: false
@@ -292,6 +437,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_balances: {
+        Row: {
+          available_balance: number
+          created_at: string | null
+          id: string
+          plan_balance: number
+          total_earned: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          available_balance?: number
+          created_at?: string | null
+          id?: string
+          plan_balance?: number
+          total_earned?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          available_balance?: number
+          created_at?: string | null
+          id?: string
+          plan_balance?: number
+          total_earned?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_plan_selections: {
         Row: {
@@ -350,6 +525,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_user_responses_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "user_responses_daily_task_id_fkey"
             columns: ["daily_task_id"]
             isOneToOne: false
@@ -386,25 +568,97 @@ export type Database = {
         }
         Relationships: []
       }
+      withdrawal_requests: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          mpesa_number: string
+          net_amount: number
+          notes: string | null
+          processed_at: string | null
+          processed_by: string | null
+          status: string
+          tax_amount: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          mpesa_number: string
+          net_amount: number
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          tax_amount: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          mpesa_number?: string
+          net_amount?: number
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          tax_amount?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      calculate_referral_reward: {
+        Args: { plan_amount: number; referral_level: number }
+        Returns: number
+      }
+      calculate_task_reward: {
+        Args: { plan_amount: number; task_type: string }
+        Returns: number
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_user_plan_amount: {
+        Args: { user_uuid: string }
+        Returns: number
+      }
       has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
+        Args:
+          | { _role: Database["public"]["Enums"]["app_role"]; _user_id: string }
+          | { role_name: string; user_uuid: string }
         Returns: boolean
       }
       is_trigger_context: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      process_referral_rewards: {
+        Args: { referred_user_id: string }
+        Returns: undefined
+      }
+      process_task_completion: {
+        Args: { task_type_param: string; user_uuid: string }
+        Returns: number
+      }
+      process_withdrawal_request: {
+        Args: {
+          amount_param: number
+          mpesa_number_param: string
+          user_uuid: string
+        }
+        Returns: string
       }
       setup_user_profile: {
         Args: { user_email: string; user_id: string }

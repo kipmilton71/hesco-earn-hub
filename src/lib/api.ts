@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from './database.types';
+import type { Database } from '@/lib/database.types';
 
 type UserBalance = Database['public']['Tables']['user_balances']['Row'];
 type Referral = Database['public']['Tables']['referrals']['Row'];
