@@ -27,7 +27,7 @@ interface Referral {
   level: number;
   status: string;
   created_at: string;
-  referred: {
+  referred?: {
     id: string;
     email: string;
     created_at: string;
@@ -43,7 +43,7 @@ interface ReferralReward {
   reward_amount: number;
   status: string;
   created_at: string;
-  referred: {
+  referred?: {
     id: string;
     email: string;
     created_at: string;
@@ -332,7 +332,7 @@ export default function ReferralSystem() {
                       <p className="text-sm font-medium">Recent Referrals:</p>
                       {levelReferrals.slice(0, 3).map((referral) => (
                         <div key={referral.id} className="flex justify-between text-xs">
-                          <span className="truncate">{referral.referred.email}</span>
+                          <span className="truncate">{referral.referred?.email || 'Unknown'}</span>
                           <span className="text-gray-500">{formatDate(referral.created_at)}</span>
                         </div>
                       ))}

@@ -17,6 +17,7 @@ import {
 } from '@/lib/api';
 import { VideoLinkManager } from '@/components/admin/VideoLinkManager';
 import { SurveyTaskManager } from '@/components/admin/SurveyTaskManager';
+import { ApplicationManager } from '@/components/admin/ApplicationManager';
 import { 
   Users, 
   DollarSign, 
@@ -45,7 +46,7 @@ interface WithdrawalRequest {
   mpesa_number: string;
   status: string;
   created_at: string;
-  user: {
+  user?: {
     id: string;
     email: string;
     phone?: string;
@@ -59,7 +60,7 @@ interface UserBalance {
   available_balance: number;
   total_earned: number;
   created_at: string;
-  user: {
+  user?: {
     id: string;
     email: string;
     phone?: string;
@@ -73,12 +74,12 @@ interface Referral {
   level: number;
   status: string;
   created_at: string;
-  referrer: {
+  referrer?: {
     id: string;
     email: string;
     created_at: string;
   };
-  referred: {
+  referred?: {
     id: string;
     email: string;
     created_at: string;
@@ -93,7 +94,7 @@ interface TaskCompletion {
   reward_amount: number;
   status: string;
   created_at: string;
-  user: {
+  user?: {
     id: string;
     email: string;
   };
@@ -301,8 +302,9 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      <Tabs defaultValue="withdrawals" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+      <Tabs defaultValue="applications" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-7">
+          <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="referrals">Referrals</TabsTrigger>
@@ -310,6 +312,11 @@ export default function AdminDashboard() {
           <TabsTrigger value="videos">Video Links</TabsTrigger>
           <TabsTrigger value="surveys">Survey Tasks</TabsTrigger>
         </TabsList>
+
+        {/* Applications Tab */}
+        <TabsContent value="applications" className="space-y-6">
+          <ApplicationManager />
+        </TabsContent>
 
         {/* Withdrawals Tab */}
         <TabsContent value="withdrawals" className="space-y-6">
@@ -337,8 +344,8 @@ export default function AdminDashboard() {
                     <TableRow key={request.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{request.user.email}</p>
-                          <p className="text-sm text-gray-500">{request.user.phone}</p>
+                          <p className="font-medium">{request.user?.email || 'Unknown'}</p>
+                          <p className="text-sm text-gray-500">{request.user?.phone || 'N/A'}</p>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -399,8 +406,8 @@ export default function AdminDashboard() {
                     <TableRow key={balance.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{balance.user.email}</p>
-                          <p className="text-sm text-gray-500">{balance.user.phone}</p>
+                          <p className="font-medium">{balance.user?.email || 'Unknown'}</p>
+                          <p className="text-sm text-gray-500">{balance.user?.phone || 'N/A'}</p>
                         </div>
                       </TableCell>
                       <TableCell>{formatCurrency(balance.plan_balance)}</TableCell>
@@ -442,17 +449,17 @@ export default function AdminDashboard() {
                     <TableRow key={referral.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{referral.referrer.email}</p>
+                          <p className="font-medium">{referral.referrer?.email || 'Unknown'}</p>
                           <p className="text-sm text-gray-500">
-                            {formatDate(referral.referrer.created_at)}
+                            {referral.referrer?.created_at ? formatDate(referral.referrer.created_at) : 'N/A'}
                           </p>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{referral.referred.email}</p>
+                          <p className="font-medium">{referral.referred?.email || 'Unknown'}</p>
                           <p className="text-sm text-gray-500">
-                            {formatDate(referral.referred.created_at)}
+                            {referral.referred?.created_at ? formatDate(referral.referred.created_at) : 'N/A'}
                           </p>
                         </div>
                       </TableCell>
@@ -498,7 +505,7 @@ export default function AdminDashboard() {
                     <TableRow key={task.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{task.user.email}</p>
+                          <p className="font-medium">{task.user?.email || 'Unknown'}</p>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -549,7 +556,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium">User</label>
-                  <p className="text-sm text-gray-600">{selectedWithdrawal.user.email}</p>
+                  <p className="text-sm text-gray-600">{selectedWithdrawal.user?.email || 'Unknown'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium">M-Pesa Number</label>

@@ -57,7 +57,7 @@ interface UserBalance {
 interface TaskCompletion {
   id: string;
   user_id: string;
-  task_type: 'video' | 'survey';
+  task_type: string;
   task_date: string;
   reward_amount: number;
   status: string;
@@ -73,7 +73,7 @@ interface ReferralReward {
   reward_amount: number;
   status: string;
   created_at: string;
-  referred: {
+  referred?: {
     id: string;
     email: string;
     created_at: string;

@@ -21,7 +21,7 @@ import {
 interface DailyTask {
   id: string;
   title: string;
-  description: string | null;
+  description?: string;
   is_active: boolean;
   created_at: string;
   questions?: Question[];
@@ -29,9 +29,9 @@ interface DailyTask {
 
 interface Question {
   id: string;
-  daily_task_id: string;
+  daily_task_id?: string;
   question_text: string;
-  question_type: 'text' | 'multiple_choice' | 'checkbox';
+  question_type: string;
   options?: string[];
   is_required: boolean;
   order_index: number;
@@ -148,7 +148,7 @@ export const SurveyTaskManager = () => {
     setSelectedTaskForQuestions(task);
     try {
       const questions = await getQuestionsForTaskAdmin(task.id);
-      setSelectedTaskForQuestions({ ...task, questions });
+      setSelectedTaskForQuestions({ ...task, questions: questions as Question[] });
     } catch (error) {
       console.error('Error fetching questions:', error);
       toast.error('Failed to fetch questions');
@@ -162,20 +162,21 @@ export const SurveyTaskManager = () => {
     try {
       const options = questionFormData.question_type !== 'text' 
         ? questionFormData.options.split(',').map(opt => opt.trim()).filter(opt => opt)
-        : undefined;
+        : [];
 
       const newQuestion = await createQuestion(
-        selectedTaskForQuestions.id,
         questionFormData.question_text,
         questionFormData.question_type,
-        options,
-        questionFormData.is_required
+        options && options.length > 0 ? options : null,
+        questionFormData.is_required,
+        (selectedTaskForQuestions.questions?.length || 0) + 1,
+        selectedTaskForQuestions.id
       );
 
       if (newQuestion) {
         setSelectedTaskForQuestions({
           ...selectedTaskForQuestions,
-          questions: [...(selectedTaskForQuestions.questions || []), newQuestion]
+          questions: [...(selectedTaskForQuestions.questions || []), newQuestion as Question]
         });
         setQuestionFormData({
           question_text: '',
