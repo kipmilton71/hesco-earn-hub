@@ -98,8 +98,8 @@ export const ApplicationManager = () => {
         status: a.status,
         created_at: a.created_at,
         updated_at: a.updated_at,
-        profiles: profileMap.get(a.user_id) || { email: '', phone: '' },
-        subscription_plans: planMap.get(a.subscription_plan_id) || { name: '', price: 0, currency: 'KSh' },
+        profiles: (profileMap.get(a.user_id) || { email: '', phone: '' }) as { email: string; phone?: string },
+        subscription_plans: (planMap.get(a.subscription_plan_id) || { name: '', price: 0, currency: 'KSh' }) as { name: string; price: number; currency: string },
         payment_submissions: (paymentsByApp.get(a.id) || []).sort((x, y) => new Date(y.created_at).getTime() - new Date(x.created_at).getTime()),
       }));
 
