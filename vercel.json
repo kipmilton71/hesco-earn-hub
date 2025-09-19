@@ -46,5 +46,11 @@
       "destination": "https://hescotech.co.ke/$1/:path*",
       "permanent": true
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
