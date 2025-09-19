@@ -568,6 +568,77 @@ export type Database = {
         }
         Relationships: []
       }
+      video_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          title: string
+          updated_at: string
+          video_url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          title: string
+          updated_at?: string
+          video_url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
+      video_task_completions: {
+        Row: {
+          completed_at: string
+          id: string
+          reward_amount: number
+          task_date: string
+          user_id: string
+          video_link_id: string
+        }
+        Insert: {
+          completed_at?: string
+          id?: string
+          reward_amount?: number
+          task_date?: string
+          user_id: string
+          video_link_id: string
+        }
+        Update: {
+          completed_at?: string
+          id?: string
+          reward_amount?: number
+          task_date?: string
+          user_id?: string
+          video_link_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_task_completions_video_link_id_fkey"
+            columns: ["video_link_id"]
+            isOneToOne: false
+            referencedRelation: "video_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       withdrawal_requests: {
         Row: {
           amount: number

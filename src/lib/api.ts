@@ -206,18 +206,105 @@ export const submitSurveyResponses = async (
 
 // Task Completion API
 export const completeVideoTask = async (userId: string, videoLinkId: string): Promise<number | null> => {
-  const { data, error } = await supabase.rpc('process_task_completion', {
-    user_uuid: userId,
-    task_type_param: 'video',
-    video_link_id_param: videoLinkId
-  });
+  try {
+    // Check if video task already completed today for this specific video
+    const today = new Date().toISOString().split('T')[0];
+    const { data: existingCompletion } = await supabase
+      .from('video_task_completions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('video_link_id', videoLinkId)
+      .eq('task_date', today)
+      .maybeSingle();
 
-  if (error) {
+    if (existingCompletion) {
+      throw new Error('This video task already completed today');
+    }
+
+    // Get user's plan amount to calculate reward
+    const planAmount = await getCurrentUserPlanAmount(userId);
+    
+    if (!planAmount) {
+      throw new Error('No active subscription plan found');
+    }
+
+    // Calculate reward based on plan
+    let rewardAmount = 0;
+    switch (planAmount) {
+      case 500: rewardAmount = 15; break;
+      case 1000: rewardAmount = 30; break;
+      case 2000: rewardAmount = 50; break;
+      case 5000: rewardAmount = 70; break;
+      default: throw new Error('Invalid plan amount');
+    }
+
+    // Create video task completion
+    const { data: videoCompletion, error: videoError } = await supabase
+      .from('video_task_completions')
+      .insert({
+        user_id: userId,
+        video_link_id: videoLinkId,
+        reward_amount: rewardAmount,
+        task_date: today
+      })
+      .select()
+      .single();
+
+    if (videoError) throw videoError;
+
+    // Also create general task completion record for tracking
+    const { data: taskCompletion, error: taskError } = await supabase
+      .from('task_completions')
+      .insert({
+        user_id: userId,
+        task_type: 'video',
+        task_date: today,
+        reward_amount: rewardAmount
+      })
+      .select()
+      .single();
+
+    if (taskError) throw taskError;
+
+    // Update user balance
+    const { data: currentBalance } = await supabase
+      .from('user_balances')
+      .select('available_balance, total_earned')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const newAvailableBalance = (currentBalance?.available_balance || 0) + rewardAmount;
+    const newTotalEarned = (currentBalance?.total_earned || 0) + rewardAmount;
+
+    const { error: balanceError } = await supabase
+      .from('user_balances')
+      .upsert({
+        user_id: userId,
+        available_balance: newAvailableBalance,
+        total_earned: newTotalEarned
+      });
+
+    if (balanceError) throw balanceError;
+
+    // Create balance transaction record
+    await supabase
+      .from('balance_transactions')
+      .insert({
+        user_id: userId,
+        transaction_type: 'task_reward',
+        amount: rewardAmount,
+        balance_before: currentBalance?.available_balance || 0,
+        balance_after: newAvailableBalance,
+        reference_id: videoCompletion.id,
+        reference_table: 'video_task_completions',
+        description: `Video task completion reward`
+      });
+
+    return rewardAmount;
+  } catch (error) {
     console.error('Error completing video task:', error);
     return null;
   }
-
-  return data;
 };
 
 export const completeSurveyTask = async (userId: string, dailyTaskId: string): Promise<number | null> => {
