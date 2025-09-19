@@ -11,12 +11,12 @@ const Hero = () => {
         <div className="space-y-8">
           <div className="space-y-4">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-              <span className="bg-gradient-primary bg-clip-text text-transparent">Global Leader</span> Now in 
-              <span className="text-primary"> Kenya</span>
+              <span className="bg-gradient-primary bg-clip-text text-transparent">Legit Investment Platform</span> - Make Money Online with 
+              <span className="text-primary"> HESCOTECH Kenya</span>
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-lg">
-              Trusted by over 1 million users across USA and UK, Hesco Technologies is now 
-              empowering Kenyan youth, investors, and entrepreneurs with proven wealth-building opportunities.
+              Join 1M+ users who trust Hesco Technologies globally. Proven tech investment platform now empowering 
+              Kenyan investors and entrepreneurs to make money online with legitimate wealth-building opportunities.
             </p>
           </div>
 
@@ -56,7 +56,7 @@ const Hero = () => {
           <div className="absolute inset-0 bg-gradient-primary rounded-2xl blur-3xl opacity-20 scale-105"></div>
           <img 
             src={heroImage} 
-            alt="Hesco Technologies Platform" 
+            alt="HESCOTECH Kenya - Legit investment platform for making money online with proven tech investment opportunities" 
             className="relative rounded-2xl shadow-card w-full h-auto"
           />
         </div>
