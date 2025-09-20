@@ -11,7 +11,7 @@ const Hero = () => {
         <div className="space-y-8">
           <div className="space-y-4">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-              <span className="bg-gradient-primary bg-clip-text text-transparent">Legit Investment Platform</span> - Make Money Online with 
+              <span className="bg-gradient-primary bg-clip-text text-transparent">Investment Platform</span> - Make Money Online with 
               <span className="text-primary"> HESCOTECH Kenya</span>
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-lg">
@@ -32,21 +32,21 @@ const Hero = () => {
               <div className="flex justify-center mb-2">
                 <Users className="h-8 w-8 text-primary" />
               </div>
-              <div className="text-2xl font-bold">1M+</div>
+              <div className="text-2xl font-bold">26,502</div>
               <div className="text-sm text-muted-foreground">Global Users</div>
             </div>
             <div className="text-center">
               <div className="flex justify-center mb-2">
                 <Smartphone className="h-8 w-8 text-secondary" />
               </div>
-              <div className="text-2xl font-bold">95%</div>
-              <div className="text-sm text-muted-foreground">Mobile Ready</div>
+              <div className="text-2xl font-bold">12,016</div>
+              <div className="text-sm text-muted-foreground">Mobile app Downloads</div>
             </div>
             <div className="text-center">
               <div className="flex justify-center mb-2">
                 <TrendingUp className="h-8 w-8 text-accent" />
               </div>
-              <div className="text-2xl font-bold">KES 20K+</div>
+              <div className="text-2xl font-bold">KES 3,000+</div>
               <div className="text-sm text-muted-foreground">Monthly Earnings</div>
             </div>
           </div>

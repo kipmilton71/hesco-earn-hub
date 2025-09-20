@@ -35,7 +35,7 @@ const CTA = () => {
           <div className="flex flex-col sm:flex-row gap-8 justify-center items-center pt-8 border-t border-white/20">
             <div className="flex items-center space-x-2">
               <DollarSign className="h-5 w-5" />
-              <span>M-Pesa Integration</span>
+              <span>M-Pesa Withdrawals</span>
             </div>
             <div className="flex items-center space-x-2">
               <Smartphone className="h-5 w-5" />
