@@ -153,71 +153,7 @@ export const ApplicationManager = () => {
           console.error('Error processing referral rewards:', rewardError);
         }
 
-        // Add paid amount to user's plan balance and total earnings  
-        try {
-          const planAmount = selectedApplication.subscription_plans.price || 0;
-          if (planAmount > 0) {
-            const { data: balance, error: balanceError } = await supabase
-              .from('user_balances')
-              .select('*')
-              .eq('user_id', selectedApplication.user_id)
-              .maybeSingle();
-
-            if (balanceError) {
-              console.error('Error fetching user balance:', balanceError);
-            } else if (balance) {
-              const { error: updateBalanceError } = await supabase
-                .from('user_balances')
-                .update({
-                  plan_balance: (balance.plan_balance || 0) + planAmount,
-                  total_earned: (balance.total_earned || 0) + planAmount,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', balance.id);
-              if (updateBalanceError) {
-                console.error('Error updating user balance:', updateBalanceError);
-              }
-            } else {
-              const { error: insertBalanceError } = await supabase
-                .from('user_balances')
-                .insert({
-                  user_id: selectedApplication.user_id,
-                  plan_balance: planAmount,
-                  available_balance: 0,
-                  total_earned: planAmount,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                });
-              if (insertBalanceError) {
-                console.error('Error creating user balance:', insertBalanceError);
-              }
-            }
-            
-            // Create balance transaction record
-            const { data: currentBalance } = await supabase
-              .from('user_balances')
-              .select('plan_balance, total_earned')
-              .eq('user_id', selectedApplication.user_id)
-              .single();
-              
-            if (currentBalance) {
-              await supabase
-                .from('balance_transactions')
-                .insert({
-                  user_id: selectedApplication.user_id,
-                  transaction_type: 'subscription_payment',
-                  amount: planAmount,
-                  balance_before: (currentBalance.plan_balance || 0) - planAmount,
-                  balance_after: currentBalance.plan_balance || 0,
-                  reference_id: selectedApplication.payment_submissions[0].id,
-                  reference_table: 'payment_submissions',
-                  description: `Subscription plan activation - ${selectedApplication.subscription_plans.name}`
-                });
-            }
-          }
-        } catch (earnError) {
-          console.error('Error updating user balance:', earnError);
-        }
+        // The database trigger will automatically handle balance updates when payment status is verified
       }
 
       toast.success(`Application ${newStatus} successfully`);
