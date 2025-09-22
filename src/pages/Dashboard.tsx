@@ -40,10 +40,12 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  LogOut
+  LogOut,
+  Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { DownloadAppButton } from '@/components/DownloadAppButton';
 
 interface UserBalance {
   id: string;
@@ -388,7 +390,7 @@ export default function Dashboard() {
       </div>
 
       {/* Balance Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">My Investments</CardTitle>
@@ -419,6 +421,21 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(userBalance?.total_earned || 0)}</div>
             <p className="text-xs text-muted-foreground">Lifetime earnings</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-primary text-white">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-white">Mobile App</CardTitle>
+            <Download className="h-4 w-4 text-white" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg font-bold text-white mb-2">Get the App</div>
+            <DownloadAppButton 
+              variant="outline" 
+              size="sm" 
+              className="bg-white text-primary hover:bg-gray-100 w-full"
+            />
           </CardContent>
         </Card>
       </div>

@@ -18,6 +18,8 @@ import {
 import { VideoLinkManager } from '@/components/admin/VideoLinkManager';
 import { SurveyTaskManager } from '@/components/admin/SurveyTaskManager';
 import { ApplicationManager } from '@/components/admin/ApplicationManager';
+import { AppVersionManager } from '@/components/admin/AppVersionManager';
+import { SystemSettings } from '@/components/admin/SystemSettings';
 import { 
   Users, 
   DollarSign, 
@@ -303,7 +305,7 @@ export default function AdminDashboard() {
       </div>
 
       <Tabs defaultValue="applications" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-9 text-sm">
           <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
@@ -311,6 +313,8 @@ export default function AdminDashboard() {
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
           <TabsTrigger value="videos">Video Links</TabsTrigger>
           <TabsTrigger value="surveys">Survey Tasks</TabsTrigger>
+          <TabsTrigger value="app-versions">App Versions</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
         {/* Applications Tab */}
@@ -538,6 +542,16 @@ export default function AdminDashboard() {
         {/* Survey Tasks Tab */}
         <TabsContent value="surveys" className="space-y-6">
           <SurveyTaskManager />
+        </TabsContent>
+
+        {/* App Versions Tab */}
+        <TabsContent value="app-versions" className="space-y-6">
+          <AppVersionManager />
+        </TabsContent>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="space-y-6">
+          <SystemSettings />
         </TabsContent>
       </Tabs>
 

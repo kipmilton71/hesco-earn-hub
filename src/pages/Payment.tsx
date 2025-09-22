@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Copy, Loader2, CheckCircle } from 'lucide-react';
+import { getMpesaPhoneNumber } from '@/lib/api';
 import type { User } from '@supabase/supabase-js';
 
 interface SubscriptionPlan {
@@ -24,14 +25,13 @@ const Payment = () => {
   const [userApplication, setUserApplication] = useState<any>(null);
   const [mpesaNumber, setMpesaNumber] = useState('');
   const [mpesaMessage, setMpesaMessage] = useState('');
+  const [companyMpesaNumber, setCompanyMpesaNumber] = useState('0702784039');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const planId = searchParams.get('plan');
-
-  const COMPANY_MPESA_NUMBER = '0702784039';
 
   useEffect(() => {
     const initializePage = async () => {
@@ -44,11 +44,17 @@ const Payment = () => {
 
       setUser(session.user);
 
+      // Load M-Pesa phone number from system settings
+      const mpesaPhone = await getMpesaPhoneNumber();
+      setCompanyMpesaNumber(mpesaPhone);
+
       if (!planId) {
         // Do not redirect to /select-plan anymore
         setLoading(false);
         return;
       }
+
+      // Fetch the selected plan
 
       // Fetch the selected plan
       const { data: planData, error } = await supabase
@@ -227,12 +233,12 @@ const Payment = () => {
                       <span>Send to:</span>
                       <div className="flex items-center gap-2">
                         <code className="bg-muted px-2 py-1 rounded font-mono">
-                          {COMPANY_MPESA_NUMBER}
+                          {companyMpesaNumber}
                         </code>
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => copyToClipboard(COMPANY_MPESA_NUMBER)}
+                          onClick={() => copyToClipboard(companyMpesaNumber)}
                         >
                           <Copy className="h-4 w-4" />
                         </Button>

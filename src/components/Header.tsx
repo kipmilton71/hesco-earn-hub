@@ -3,6 +3,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import HescoLogo from "./HescoLogo";
+import { DownloadAppButton } from "./DownloadAppButton";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ const Header = () => {
 
         <div className="flex items-center space-x-4">
           <div className="hidden sm:flex items-center space-x-4">
+            <DownloadAppButton variant="outline" size="sm" />
             <Button 
               variant="outline" 
               size="sm"
@@ -60,22 +62,23 @@ const Header = () => {
                 <a href="#about" className="text-lg font-medium hover:text-primary transition-colors">
                   About
                 </a>
-                <div className="flex flex-col space-y-3 pt-6">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => navigate('/auth')}
-                  >
-                    Sign In
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
-                    onClick={() => navigate('/auth')}
-                  >
-                    Get Started
-                  </Button>
-                </div>
+                 <div className="flex flex-col space-y-3 pt-6">
+                   <DownloadAppButton size="sm" className="w-full" />
+                   <Button 
+                     variant="outline" 
+                     size="sm"
+                     onClick={() => navigate('/auth')}
+                   >
+                     Sign In
+                   </Button>
+                   <Button 
+                     size="sm" 
+                     className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+                     onClick={() => navigate('/auth')}
+                   >
+                     Get Started
+                   </Button>
+                 </div>
               </nav>
             </SheetContent>
           </Sheet>

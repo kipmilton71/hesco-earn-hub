@@ -831,3 +831,29 @@ export const calculateTax = (amount: number): number => {
 export const calculateNetAmount = (amount: number): number => {
   return amount - calculateTax(amount);
 };
+
+// System Settings API functions
+export const getSystemSetting = async (key: string): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('setting_value')
+      .eq('setting_key', key)
+      .maybeSingle();
+
+    if (error) {
+      console.error(`Error fetching system setting ${key}:`, error);
+      return null;
+    }
+
+    return data?.setting_value || null;
+  } catch (error) {
+    console.error(`Error fetching system setting ${key}:`, error);
+    return null;
+  }
+};
+
+export const getMpesaPhoneNumber = async (): Promise<string> => {
+  const phoneNumber = await getSystemSetting('mpesa_phone_number');
+  return phoneNumber || '254700000000'; // Default fallback
+};

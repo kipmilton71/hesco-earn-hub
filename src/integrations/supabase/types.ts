@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          file_path: string
+          file_size: number | null
+          id: string
+          is_active: boolean
+          release_notes: string | null
+          updated_at: string
+          version_code: number
+          version_name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          file_path: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean
+          release_notes?: string | null
+          updated_at?: string
+          version_code: number
+          version_name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean
+          release_notes?: string | null
+          updated_at?: string
+          version_code?: number
+          version_name?: string
+        }
+        Relationships: []
+      }
       balance_transactions: {
         Row: {
           amount: number
@@ -353,6 +392,36 @@ export type Database = {
           name?: string
           price?: number
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          created_at: string
+          id: string
+          setting_description: string | null
+          setting_key: string
+          setting_value: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          setting_description?: string | null
+          setting_key: string
+          setting_value: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          setting_description?: string | null
+          setting_key?: string
+          setting_value?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
