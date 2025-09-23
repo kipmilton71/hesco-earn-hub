@@ -46,6 +46,7 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { DownloadAppButton } from '@/components/DownloadAppButton';
+import { TaskDisplay } from '@/components/customer/TaskDisplay';
 
 interface UserBalance {
   id: string;
@@ -458,24 +459,35 @@ export default function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Video Task */}
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Play className="h-6 w-6 text-blue-600" />
+              {/* Video Task Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Play className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Watch Video</h3>
+                      <p className="text-sm text-gray-600">Watch a short video to earn rewards</p>
+                      <p className="text-sm font-medium text-green-600">
+                        Reward: {formatCurrency(getTaskReward('video'))}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">Watch Video</h3>
-                    <p className="text-sm text-gray-600">Watch a short video to earn rewards</p>
-                    <p className="text-sm font-medium text-green-600">
-                      Reward: {formatCurrency(getTaskReward('video'))}
-                    </p>
-                    {videoLinks.length > 0 && (
-                      <div className="mt-2">
+                  <div className="flex items-center space-x-2">
+                    {isVideoCompleted() ? (
+                      <Badge variant="secondary" className="flex items-center space-x-1">
+                        <CheckCircle className="h-4 w-4" />
+                        <span>Completed</span>
+                      </Badge>
+                    ) : videoLinks.length === 0 ? (
+                      <Badge variant="outline">No videos available</Badge>
+                    ) : (
+                      <div className="space-y-2">
                         <select
                           value={selectedVideoLink}
                           onChange={(e) => setSelectedVideoLink(e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
+                          className="p-2 border rounded text-sm"
                         >
                           {videoLinks.map((video) => (
                             <option key={video.id} value={video.id}>
@@ -487,42 +499,50 @@ export default function Dashboard() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {isVideoCompleted() ? (
-                    <Badge variant="secondary" className="flex items-center space-x-1">
-                      <CheckCircle className="h-4 w-4" />
-                      <span>Completed</span>
-                    </Badge>
-                  ) : (
-                    <Button 
-                      onClick={handleVideoTaskCompletion}
-                      disabled={taskLoading || videoLinks.length === 0}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      {taskLoading ? 'Processing...' : 'Complete'}
-                    </Button>
-                  )}
-                </div>
+
+                {!isVideoCompleted() && videoLinks.length > 0 && selectedVideoLink && (
+                  <TaskDisplay
+                    video={videoLinks.find(v => v.id === selectedVideoLink) || null}
+                    task={null}
+                    taskType="video"
+                    onComplete={handleVideoTaskCompletion}
+                    isCompleted={isVideoCompleted()}
+                    isLoading={taskLoading}
+                    reward={getTaskReward('video')}
+                    userId={user?.id || ''}
+                  />
+                )}
               </div>
 
-              {/* Survey Task */}
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <FileText className="h-6 w-6 text-green-600" />
+              {/* Survey Task Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <FileText className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Complete Survey</h3>
+                      <p className="text-sm text-gray-600">Fill out a quick survey to earn rewards</p>
+                      <p className="text-sm font-medium text-green-600">
+                        Reward: {formatCurrency(getTaskReward('survey'))}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">Complete Survey</h3>
-                    <p className="text-sm text-gray-600">Fill out a quick survey to earn rewards</p>
-                    <p className="text-sm font-medium text-green-600">
-                      Reward: {formatCurrency(getTaskReward('survey'))}
-                    </p>
-                    {dailyTasks.length > 0 && (
-                      <div className="mt-2">
+                  <div className="flex items-center space-x-2">
+                    {isSurveyCompleted() ? (
+                      <Badge variant="secondary" className="flex items-center space-x-1">
+                        <CheckCircle className="h-4 w-4" />
+                        <span>Completed</span>
+                      </Badge>
+                    ) : dailyTasks.length === 0 ? (
+                      <Badge variant="outline">No surveys available</Badge>
+                    ) : (
+                      <div className="space-y-2">
                         <select
                           value={selectedDailyTask}
                           onChange={(e) => setSelectedDailyTask(e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
+                          className="p-2 border rounded text-sm"
                         >
                           {dailyTasks.map((task) => (
                             <option key={task.id} value={task.id}>
@@ -534,22 +554,19 @@ export default function Dashboard() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {isSurveyCompleted() ? (
-                    <Badge variant="secondary" className="flex items-center space-x-1">
-                      <CheckCircle className="h-4 w-4" />
-                      <span>Completed</span>
-                    </Badge>
-                  ) : (
-                    <Button 
-                      onClick={handleSurveyTaskCompletion}
-                      disabled={taskLoading || dailyTasks.length === 0}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      {taskLoading ? 'Processing...' : 'Complete'}
-                    </Button>
-                  )}
-                </div>
+
+                {!isSurveyCompleted() && dailyTasks.length > 0 && selectedDailyTask && (
+                  <TaskDisplay
+                    task={dailyTasks.find(t => t.id === selectedDailyTask) || null}
+                    video={null}
+                    taskType="survey"
+                    onComplete={handleSurveyTaskCompletion}
+                    isCompleted={isSurveyCompleted()}
+                    isLoading={taskLoading}
+                    reward={getTaskReward('survey')}
+                    userId={user?.id || ''}
+                  />
+                )}
               </div>
 
               {/* Today's Progress */}
