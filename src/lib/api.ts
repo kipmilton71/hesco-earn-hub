@@ -310,8 +310,7 @@ export const completeVideoTask = async (userId: string, videoLinkId: string): Pr
 export const completeSurveyTask = async (userId: string, dailyTaskId: string): Promise<number | null> => {
   const { data, error } = await supabase.rpc('process_task_completion', {
     user_uuid: userId,
-    task_type_param: 'survey',
-    daily_task_id_param: dailyTaskId
+    task_type_param: 'survey'
   });
 
   if (error) {

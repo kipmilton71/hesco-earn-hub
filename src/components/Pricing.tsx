@@ -125,6 +125,11 @@ const Pricing = () => {
           <p className="text-muted-foreground mb-4">
             All plans include our "Refer 3, Earn Your Fee Back" guarantee
           </p>
+          <div className="bg-muted/50 border border-muted rounded-lg p-4 mb-6 max-w-2xl mx-auto">
+            <p className="text-sm text-muted-foreground">
+              <strong>NB:</strong> All payments are received and processed by our regional admin Mr. Ibrahim (+254116269694)
+            </p>
+          </div>
           <Button variant="outline" size="lg" className="w-full sm:w-auto">
             Compare All Features
           </Button>
