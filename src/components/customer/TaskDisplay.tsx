@@ -65,6 +65,8 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
   const [questionsLoading, setQuestionsLoading] = useState(false);
   const [canComplete, setCanComplete] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
+  const [videoTimer, setVideoTimer] = useState(0);
+  const [timerActive, setTimerActive] = useState(false);
 
   useEffect(() => {
     if (taskType === 'survey' && task) {
@@ -119,9 +121,28 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
     }));
   };
 
-  const handleVideoWatchComplete = () => {
-    setVideoWatched(true);
-    toast.success('Video watching completed! You can now claim your reward.');
+  const handleVideoClick = () => {
+    if (video && !timerActive) {
+      // Open YouTube video in new tab
+      window.open(video.video_url, '_blank');
+      
+      // Start 5-second timer
+      setTimerActive(true);
+      setVideoTimer(5);
+      
+      const countdown = setInterval(() => {
+        setVideoTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdown);
+            setVideoWatched(true);
+            setTimerActive(false);
+            toast.success('Video watching completed! You can now claim your reward.');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
   };
 
   const handleComplete = async () => {
@@ -183,32 +204,39 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
             <p className="text-sm text-gray-600">{video.description}</p>
           )}
           
-          <div className="aspect-video rounded-lg overflow-hidden bg-black">
-            {video.video_url.includes('youtube.com') || video.video_url.includes('youtu.be') ? (
-              <iframe
-                src={video.video_url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
-                title={video.title}
-                className="w-full h-full"
-                allowFullScreen
-                onLoad={() => {
-                  // Simulate watching completion after 30 seconds for YouTube videos
-                  setTimeout(() => {
-                    if (!videoWatched && !isCompleted) {
-                      handleVideoWatchComplete();
-                    }
-                  }, 30000);
-                }}
-              />
-            ) : (
-              <video
-                src={video.video_url}
-                controls
-                className="w-full h-full"
-                onEnded={handleVideoWatchComplete}
-              >
-                Your browser does not support the video tag.
-              </video>
-            )}
+          <div className="aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+            <div className="text-center text-white p-8">
+              <Play className="h-16 w-16 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">{video.title}</h3>
+              <p className="text-blue-100 mb-6">
+                Click to watch this video on YouTube
+              </p>
+              
+              {!timerActive && !videoWatched && (
+                <Button 
+                  onClick={handleVideoClick}
+                  className="bg-white text-blue-600 hover:bg-blue-50"
+                  size="lg"
+                >
+                  <Play className="h-5 w-5 mr-2" />
+                  Watch Video
+                </Button>
+              )}
+              
+              {timerActive && (
+                <div className="text-center">
+                  <div className="text-3xl font-bold mb-2">{videoTimer}</div>
+                  <p className="text-sm">Video opened! Waiting for completion...</p>
+                </div>
+              )}
+              
+              {videoWatched && (
+                <div className="flex items-center justify-center text-green-300">
+                  <CheckCircle className="h-5 w-5 mr-2" />
+                  <span>Video completed!</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {videoWatched && !isCompleted && (

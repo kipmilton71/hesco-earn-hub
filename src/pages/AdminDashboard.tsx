@@ -20,6 +20,7 @@ import { SurveyTaskManager } from '@/components/admin/SurveyTaskManager';
 import { ApplicationManager } from '@/components/admin/ApplicationManager';
 import { AppVersionManager } from '@/components/admin/AppVersionManager';
 import { SystemSettings } from '@/components/admin/SystemSettings';
+import { ResponseViewer } from '@/components/admin/ResponseViewer';
 import { 
   Users, 
   DollarSign, 
@@ -486,52 +487,60 @@ export default function AdminDashboard() {
 
         {/* Tasks Tab */}
         <TabsContent value="tasks" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Task Completions</CardTitle>
-              <CardDescription>
-                View all daily task completions and rewards.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Task Type</TableHead>
-                    <TableHead>Reward</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {taskCompletions.map((task) => (
-                    <TableRow key={task.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{task.user?.email || 'Unknown'}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={task.task_type === 'video' ? 'default' : 'secondary'}>
-                          {task.task_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-green-600 font-medium">
-                        {formatCurrency(task.reward_amount)}
-                      </TableCell>
-                      <TableCell>{formatDate(task.task_date)}</TableCell>
-                      <TableCell>
-                        <Badge variant={task.status === 'completed' ? 'default' : 'secondary'}>
-                          {task.status}
-                        </Badge>
-                      </TableCell>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Task Completions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Task Completions</CardTitle>
+                <CardDescription>
+                  View all daily task completions and rewards.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Task Type</TableHead>
+                      <TableHead>Reward</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {taskCompletions.slice(0, 10).map((task) => (
+                      <TableRow key={task.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{task.user?.email || 'Unknown'}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={task.task_type === 'video' ? 'default' : 'secondary'}>
+                            {task.task_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-green-600 font-medium">
+                          {formatCurrency(task.reward_amount)}
+                        </TableCell>
+                        <TableCell>{formatDate(task.task_date)}</TableCell>
+                        <TableCell>
+                          <Badge variant={task.status === 'completed' ? 'default' : 'secondary'}>
+                            {task.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* Survey Responses */}
+            <div className="space-y-6">
+              <ResponseViewer />
+            </div>
+          </div>
         </TabsContent>
 
         {/* Video Links Tab */}
