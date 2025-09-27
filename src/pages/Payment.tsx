@@ -25,7 +25,7 @@ const Payment = () => {
   const [userApplication, setUserApplication] = useState<any>(null);
   const [mpesaNumber, setMpesaNumber] = useState('');
   const [mpesaMessage, setMpesaMessage] = useState('');
-  const [companyMpesaNumber, setCompanyMpesaNumber] = useState('0702784039');
+  const [companyMpesaNumber, setCompanyMpesaNumber] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
@@ -46,7 +46,15 @@ const Payment = () => {
 
       // Load M-Pesa phone number from system settings
       const mpesaPhone = await getMpesaPhoneNumber();
-      setCompanyMpesaNumber(mpesaPhone);
+      if (mpesaPhone) {
+        setCompanyMpesaNumber(mpesaPhone);
+      } else {
+        toast({
+          title: "Configuration Missing",
+          description: "M-Pesa number not configured in admin settings",
+          variant: "destructive"
+        });
+      }
 
       if (!planId) {
         // Do not redirect to /select-plan anymore

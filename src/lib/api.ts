@@ -854,5 +854,5 @@ export const getSystemSetting = async (key: string): Promise<string | null> => {
 
 export const getMpesaPhoneNumber = async (): Promise<string> => {
   const phoneNumber = await getSystemSetting('mpesa_phone_number');
-  return phoneNumber || '254700000000'; // Default fallback
+  return phoneNumber || ''; // Return empty if not configured
 };
