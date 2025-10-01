@@ -134,18 +134,19 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
 
   const handleComplete = async () => {
     if (taskType === 'survey' && task && questions.length > 0) {
-      // Check if user has already submitted responses for this task TODAY
+      // Check if user has already completed this survey task TODAY by checking task_completions
       try {
-        const { data: existingResponses } = await supabase
-          .from('user_responses')
+        const today = new Date().toISOString().split('T')[0];
+        const { data: existingCompletion } = await supabase
+          .from('task_completions')
           .select('id')
           .eq('user_id', userId)
-          .eq('daily_task_id', task.id)
-          .eq('submitted_date', new Date().toISOString().split('T')[0]) // Check for today's date
+          .eq('task_type', 'survey')
+          .eq('task_date', today)
           .limit(1);
 
-        if (existingResponses && existingResponses.length > 0) {
-          toast.error('You have already submitted this survey today. Come back tomorrow!');
+        if (existingCompletion && existingCompletion.length > 0) {
+          toast.error('You have already completed the survey today. Come back tomorrow!');
           return;
         }
 
@@ -164,7 +165,7 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
           daily_task_id: task.id,
           response_text: q.question_type === 'text' ? responses[q.id] || null : null,
           response_options: q.question_type !== 'text' ? responses[q.id] || null : null,
-          submitted_date: new Date().toISOString().split('T')[0] // Add today's date
+          submitted_date: today
         }));
 
         const { error } = await supabase
@@ -173,16 +174,9 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
 
         if (error) {
           console.error('Error inserting responses:', error);
-          if (error.code === '23505') {
-            toast.error('You have already submitted this survey today');
-          } else {
-            toast.error('Failed to submit survey responses');
-          }
+          toast.error('Failed to submit survey responses');
           return;
         }
-        
-        // Success! Show toast and call onComplete
-        toast.success('Survey submitted successfully! Reward will be credited.');
       } catch (error) {
         console.error('Error submitting responses:', error);
         toast.error('Failed to submit survey responses');
