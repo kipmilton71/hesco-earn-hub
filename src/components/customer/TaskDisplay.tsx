@@ -134,17 +134,18 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
 
   const handleComplete = async () => {
     if (taskType === 'survey' && task && questions.length > 0) {
-      // Check if user has already submitted responses for this task
+      // Check if user has already submitted responses for this task TODAY
       try {
         const { data: existingResponses } = await supabase
           .from('user_responses')
           .select('id')
           .eq('user_id', userId)
           .eq('daily_task_id', task.id)
+          .eq('submitted_date', new Date().toISOString().split('T')[0]) // Check for today's date
           .limit(1);
 
         if (existingResponses && existingResponses.length > 0) {
-          toast.error('You have already submitted responses for this survey');
+          toast.error('You have already submitted this survey today. Come back tomorrow!');
           return;
         }
 
@@ -156,13 +157,14 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
           return;
         }
 
-        // Use supabase directly to insert responses
+        // Use supabase directly to insert responses with today's date
         const responseInserts = questions.map(q => ({
           user_id: userId,
           question_id: q.id,
           daily_task_id: task.id,
           response_text: q.question_type === 'text' ? responses[q.id] || null : null,
-          response_options: q.question_type !== 'text' ? responses[q.id] || null : null
+          response_options: q.question_type !== 'text' ? responses[q.id] || null : null,
+          submitted_date: new Date().toISOString().split('T')[0] // Add today's date
         }));
 
         const { error } = await supabase
@@ -172,12 +174,15 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
         if (error) {
           console.error('Error inserting responses:', error);
           if (error.code === '23505') {
-            toast.error('You have already submitted this survey');
+            toast.error('You have already submitted this survey today');
           } else {
             toast.error('Failed to submit survey responses');
           }
           return;
         }
+        
+        // Success! Show toast and call onComplete
+        toast.success('Survey submitted successfully! Reward will be credited.');
       } catch (error) {
         console.error('Error submitting responses:', error);
         toast.error('Failed to submit survey responses');
@@ -185,6 +190,7 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
       }
     }
     
+    // Call onComplete to process the task completion
     onComplete();
   };
 

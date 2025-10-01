@@ -569,6 +569,7 @@ export type Database = {
           question_id: string
           response_options: string[] | null
           response_text: string | null
+          submitted_date: string
           updated_at: string
           user_id: string
         }
@@ -579,6 +580,7 @@ export type Database = {
           question_id: string
           response_options?: string[] | null
           response_text?: string | null
+          submitted_date?: string
           updated_at?: string
           user_id: string
         }
@@ -589,6 +591,7 @@ export type Database = {
           question_id?: string
           response_options?: string[] | null
           response_text?: string | null
+          submitted_date?: string
           updated_at?: string
           user_id?: string
         }
