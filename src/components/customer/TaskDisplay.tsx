@@ -122,38 +122,39 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
   };
 
   const handleVideoClick = () => {
-    if (video && !timerActive) {
+    if (video && !videoWatched) {
       // Open YouTube video in new tab
       window.open(video.video_url, '_blank');
       
-      // Start 5-second timer
-      setTimerActive(true);
-      setVideoTimer(5);
-      
-      const countdown = setInterval(() => {
-        setVideoTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(countdown);
-            setVideoWatched(true);
-            setTimerActive(false);
-            toast.success('Video watching completed! You can now claim your reward.');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      // Immediately mark as watched so submit button shows
+      setVideoWatched(true);
+      toast.success('Video opened! You can now claim your reward.');
     }
   };
 
   const handleComplete = async () => {
     if (taskType === 'survey' && task && questions.length > 0) {
-      // Submit survey responses first
+      // Check if user has already submitted responses for this task
       try {
-        const responseArray = questions.map(q => ({
-          questionId: q.id,
-          responseText: q.question_type === 'text' ? responses[q.id] || '' : undefined,
-          responseOptions: q.question_type !== 'text' ? responses[q.id] || [] : undefined
-        }));
+        const { data: existingResponses } = await supabase
+          .from('user_responses')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('daily_task_id', task.id)
+          .limit(1);
+
+        if (existingResponses && existingResponses.length > 0) {
+          toast.error('You have already submitted responses for this survey');
+          return;
+        }
+
+        // Refresh session before inserting to avoid auth errors
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          toast.error('Session expired. Please login again.');
+          return;
+        }
 
         // Use supabase directly to insert responses
         const responseInserts = questions.map(q => ({
@@ -170,7 +171,11 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
 
         if (error) {
           console.error('Error inserting responses:', error);
-          toast.error('Failed to submit survey responses');
+          if (error.code === '23505') {
+            toast.error('You have already submitted this survey');
+          } else {
+            toast.error('Failed to submit survey responses');
+          }
           return;
         }
       } catch (error) {
@@ -212,7 +217,7 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
                 Click to watch this video on YouTube
               </p>
               
-              {!timerActive && !videoWatched && (
+              {!videoWatched && (
                 <Button 
                   onClick={handleVideoClick}
                   className="bg-white text-blue-600 hover:bg-blue-50"
@@ -223,17 +228,10 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
                 </Button>
               )}
               
-              {timerActive && (
-                <div className="text-center">
-                  <div className="text-3xl font-bold mb-2">{videoTimer}</div>
-                  <p className="text-sm">Video opened! Waiting for completion...</p>
-                </div>
-              )}
-              
               {videoWatched && (
                 <div className="flex items-center justify-center text-green-300">
                   <CheckCircle className="h-5 w-5 mr-2" />
-                  <span>Video completed!</span>
+                  <span>Video opened!</span>
                 </div>
               )}
             </div>
