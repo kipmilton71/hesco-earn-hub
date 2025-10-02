@@ -129,22 +129,10 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
 
   const handleComplete = async () => {
     if (taskType === 'survey' && task && questions.length > 0) {
-      // Check if user has already completed this survey task TODAY by checking task_completions
+      // Save survey responses to database
       try {
         const today = new Date().toISOString().split('T')[0];
-        const { data: existingCompletion } = await supabase
-          .from('task_completions')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('task_type', 'survey')
-          .eq('task_date', today)
-          .limit(1);
-
-        if (existingCompletion && existingCompletion.length > 0) {
-          toast.error('You have already completed the survey today. Come back tomorrow!');
-          return;
-        }
-
+        
         // Refresh session before inserting to avoid auth errors
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
@@ -153,7 +141,7 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
           return;
         }
 
-        // Use supabase directly to insert responses with today's date
+        // Insert responses with today's date
         const responseInserts = questions.map(q => ({
           user_id: userId,
           question_id: q.id,
@@ -179,7 +167,7 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
       }
     }
     
-    // Call onComplete to process the task completion
+    // Call onComplete callback which will handle task completion and balance update via secure function
     onComplete();
   };
 

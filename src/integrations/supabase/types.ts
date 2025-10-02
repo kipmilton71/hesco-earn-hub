@@ -769,6 +769,15 @@ export type Database = {
         Args: { plan_amount: number; task_type: string }
         Returns: number
       }
+      complete_task_and_update_balance: {
+        Args: {
+          p_reward_amount: number
+          p_task_date: string
+          p_task_type: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
