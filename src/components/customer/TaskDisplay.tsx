@@ -64,9 +64,6 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [questionsLoading, setQuestionsLoading] = useState(false);
   const [canComplete, setCanComplete] = useState(false);
-  const [videoWatched, setVideoWatched] = useState(false);
-  const [videoTimer, setVideoTimer] = useState(0);
-  const [timerActive, setTimerActive] = useState(false);
 
   useEffect(() => {
     if (taskType === 'survey' && task) {
@@ -77,10 +74,8 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
   useEffect(() => {
     if (taskType === 'survey') {
       checkSurveyCompletion();
-    } else if (taskType === 'video') {
-      setCanComplete(videoWatched);
     }
-  }, [responses, videoWatched, questions, taskType]);
+  }, [responses, questions, taskType]);
 
   const loadQuestions = async () => {
     if (!task) return;
@@ -122,13 +117,13 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
   };
 
   const handleVideoClick = () => {
-    if (video && !videoWatched) {
+    if (video && !isCompleted) {
       // Open YouTube video in new tab
       window.open(video.video_url, '_blank');
       
-      // Immediately mark as watched so submit button shows
-      setVideoWatched(true);
-      toast.success('Video opened! You can now claim your reward.');
+      // Immediately complete the task and claim reward
+      toast.success('Video opened! Processing reward...');
+      onComplete();
     }
   };
 
@@ -214,45 +209,27 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
               <Play className="h-16 w-16 mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">{video.title}</h3>
               <p className="text-blue-100 mb-6">
-                Click to watch this video on YouTube
+                {isCompleted ? 'Task completed!' : 'Click to watch and earn your reward'}
               </p>
               
-              {!videoWatched && (
+              {!isCompleted ? (
                 <Button 
                   onClick={handleVideoClick}
+                  disabled={isLoading}
                   className="bg-white text-blue-600 hover:bg-blue-50"
                   size="lg"
                 >
                   <Play className="h-5 w-5 mr-2" />
-                  Watch Video
+                  {isLoading ? 'Processing...' : `Watch Video & Earn ${reward} KSh`}
                 </Button>
-              )}
-              
-              {videoWatched && (
+              ) : (
                 <div className="flex items-center justify-center text-green-300">
                   <CheckCircle className="h-5 w-5 mr-2" />
-                  <span>Video opened!</span>
+                  <span>Completed - Reward credited!</span>
                 </div>
               )}
             </div>
           </div>
-
-          {videoWatched && !isCompleted && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-700 flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4" />
-                <span>Video completed! You can now claim your reward.</span>
-              </p>
-            </div>
-          )}
-
-          <Button 
-            onClick={handleComplete}
-            disabled={!canComplete || isCompleted || isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700"
-          >
-            {isLoading ? 'Processing...' : isCompleted ? 'Completed' : videoWatched ? 'Claim Reward' : 'Complete Video First'}
-          </Button>
         </CardContent>
       </Card>
     );
