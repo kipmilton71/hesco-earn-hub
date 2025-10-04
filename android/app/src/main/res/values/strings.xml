@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">hesco</string>
+    <string name="title_activity_main">hesco</string>
+    <string name="package_name">earn.hesco.app</string>
+    <string name="custom_url_scheme">earn.hesco.app</string>
+</resources>

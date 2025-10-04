@@ -1,9 +1,14 @@
 {
   "expo": {
+    "name": "hesco",
+    "slug": "hesco",
     "extra": {
       "eas": {
         "projectId": "14b47818-1bb9-4299-a767-7f9c68c3f68b"
       }
+    },
+    "android": {
+      "package": "com.hesco.earn"
     }
   }
 }
